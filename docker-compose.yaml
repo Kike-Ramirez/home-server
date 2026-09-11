@@ -1,0 +1,223 @@
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:2026.9.0@sha256:372d991e58882a1d8c68c07e9aa3f3b509276e695355f73ccdb03baa70407293
+    container_name: homeassistant
+    privileged: true
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./homeassistant/config:/config
+      - /run/dbus:/run/dbus:ro
+    devices:
+      - /dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_345bc645e721f011b128648fb887153e-if00-port0:/dev/ttyACM0
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:8123/manifest.json']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+  pihole:
+    image: pihole/pihole:2026.07.2@sha256:f7d1be836e3bc608b56d82fc9904f5a831cdfbc0dc9c6d58f94e4c985c70038b
+    container_name: pihole
+    network_mode: host
+    environment:
+      TZ: '${TZ}'
+      FTLCONF_webserver_api_password: '${PIHOLE_PASSWORD}'
+      FTLCONF_dns_listeningMode: 'ALL'
+      FTLCONF_webserver_port: '8080,[::]:8080'
+    volumes:
+      - './pihole/etc-pihole:/etc/pihole'
+    cap_add:
+      - NET_ADMIN
+      - SYS_TIME
+      - SYS_NICE
+    restart: unless-stopped
+
+  vaultwarden:
+    image: vaultwarden/server:1.37.2@sha256:094b5689ed81549bd293418395c7cf495ae9d960fc2d4928cef2083ef913d912
+    container_name: vaultwarden
+    restart: unless-stopped
+    environment:
+      - DOMAIN=${VAULTWARDEN_DOMAIN}
+      - SIGNUPS_ALLOWED=${SIGNUPS_ALLOWED}
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN}
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_FROM=${SMTP_USERNAME}
+      - SMTP_PORT=587
+      - SMTP_SECURITY=starttls
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+    volumes:
+      - ./vaultwarden/data:/data
+    ports:
+      - '8081:80'
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:2.15.1@sha256:52b2c59994f3d36acfcf70a1626f29734df0ed8c71bacc0269f78b6f939858bb
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    depends_on:
+      vaultwarden:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+      - '81:81'
+    volumes:
+      - ./nginx-proxy-manager/data:/data
+      - ./nginx-proxy-manager/letsencrypt:/etc/letsencrypt
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:81/api/']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  node-exporter:
+    image: prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0
+    container_name: node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - ./backups/metrics:/textfile_collector:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.textfile.directory=/textfile_collector'
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:9100/metrics']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.55.1@sha256:3de2bd5203120b866d74a9b283b2ffb8ec382fbf9dc321814700c6ea6f44ec57
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    command:
+      - '-docker_only=true'
+    ports:
+      - '8082:8080'
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  prometheus:
+    image: prom/prometheus:v3.14.0@sha256:5ce7540c3c00ef4ab0c9d2c995c6a5b9c421f44b4a115d97a2c7af3b1c21cbb0
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=730d'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - '9090:9090'
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:9090/-/ready']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  grafana:
+    image: grafana/grafana:13.2.1@sha256:f772d434e8fab0049deb2b1b30abd43342bcfca1537614aa8d36080232cf4283
+    container_name: grafana
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      - GF_SERVER_ROOT_URL=https://grafana.kikeramirez.org
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=${SMTP_USERNAME}
+      - GF_SMTP_PASSWORD=${SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=${SMTP_USERNAME}
+      - GF_SMTP_FROM_NAME=Grafana (Optiplex)
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - '3000:3000'
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0@sha256:e753ff9f3fc458d02cca5eddab5a77e1c175eee484a8925ac7d524f04366c2fc
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    volumes:
+      - ./blackbox/config.yml:/etc/blackbox_exporter/config.yml:ro
+    cap_add:
+      - NET_RAW
+    ports:
+      - '9115:9115'
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:9115/metrics']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  speedtest-exporter:
+    image: miguelndecarvalho/speedtest-exporter:v3.5.4@sha256:f1064d49124c7fc45faabb87c6c876a2fd04e92b3dc14d4b871301217ba30fed
+    container_name: speedtest-exporter
+    restart: unless-stopped
+    ports:
+      - '9798:9798'
+    healthcheck:
+      # override the image's default healthcheck: it probes "localhost",
+      # which resolves to ::1 first -- the app only binds IPv4 (0.0.0.0),
+      # so it was always "connection refused" even though the service works.
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:9798/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  tailscale:
+    image: tailscale/tailscale:v1.102.3@sha256:8c42c4574ab066384fcb72f69e086a2ff1dd3652eb6f56856cee34bcf0d2f680
+    container_name: tailscale
+    hostname: optiplex-home
+    restart: unless-stopped
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_EXTRA_ARGS=--advertise-routes=192.168.0.100/32 --accept-dns=false
+    volumes:
+      - ./tailscale/state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    network_mode: host
+    healthcheck:
+      test: ['CMD', 'tailscale', 'status']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  prometheus_data:
+  grafana_data:

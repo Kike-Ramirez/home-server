@@ -1,0 +1,490 @@
+{
+  "uid": "homelab-overview",
+  "title": "Homelab Overview",
+  "tags": [
+    "homelab"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 11,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Estado general",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Uptime",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "node_time_seconds - node_boot_time_seconds",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "CPU Busy",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 70
+              },
+              {
+                "color": "#FF453A",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "RAM Used",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 80
+              },
+              {
+                "color": "#FF453A",
+                "value": 95
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Disco / Used",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "100 * (1 - (node_filesystem_avail_bytes{mountpoint=\"/\",fstype!=\"tmpfs\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"tmpfs\"}))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 75
+              },
+              {
+                "color": "#FF453A",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Ultimo backup con exito",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "(time() - backup_last_run_timestamp_seconds) * backup_last_run_success",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 90000
+              },
+              {
+                "color": "#FF453A",
+                "value": 172800
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Disco USB backups libre",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "100 * (backup_drive_free_bytes / backup_drive_total_bytes)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#FF453A",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 10
+              },
+              {
+                "color": "#30D158",
+                "value": 20
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Contenedores",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "collapsed": false,
+      "panels": [
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "CPU por contenedor (Top 6)",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 6
+          },
+          "targets": [
+            {
+              "expr": "topk(6, sum(rate(container_cpu_usage_seconds_total{name=~\"$container\"}[5m])) by (name)) * 100",
+              "legendFormat": "{{name}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 10,
+          "type": "timeseries",
+          "title": "Memoria por contenedor (Top 6)",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 6
+          },
+          "targets": [
+            {
+              "expr": "topk(6, container_memory_usage_bytes{name=~\"$container\"})",
+              "legendFormat": "{{name}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 11,
+          "type": "bargauge",
+          "title": "Reinicios por contenedor (rango visible)",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 14
+          },
+          "targets": [
+            {
+              "expr": "sum by (name) (changes(container_start_time_seconds{name=~\"$container\"}[$__range]))",
+              "legendFormat": "{{name}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "orientation": "horizontal",
+            "displayMode": "lcd",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "min": 0
+            },
+            "overrides": []
+          }
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Red y disco (host)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "collapsed": false,
+      "panels": [
+        {
+          "id": 13,
+          "type": "timeseries",
+          "title": "Trafico de red",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 23
+          },
+          "targets": [
+            {
+              "expr": "rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])",
+              "legendFormat": "rx {{device}}",
+              "refId": "A"
+            },
+            {
+              "expr": "rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])",
+              "legendFormat": "tx {{device}}",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 14,
+          "type": "timeseries",
+          "title": "Disk I/O (host)",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 23
+          },
+          "targets": [
+            {
+              "expr": "rate(node_disk_read_bytes_total[5m])",
+              "legendFormat": "read {{device}}",
+              "refId": "A"
+            },
+            {
+              "expr": "rate(node_disk_written_bytes_total[5m])",
+              "legendFormat": "write {{device}}",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps"
+            },
+            "overrides": []
+          }
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "title": "Home",
+      "type": "link",
+      "url": "/d/home-launcher/home",
+      "icon": "home-alt",
+      "targetBlank": false
+    },
+    {
+      "title": "Homelab Overview",
+      "type": "link",
+      "url": "/d/homelab-overview/homelab-overview",
+      "icon": "apps",
+      "targetBlank": false
+    },
+    {
+      "title": "Network",
+      "type": "link",
+      "url": "/d/network-overview/network",
+      "icon": "globe",
+      "targetBlank": false
+    },
+    {
+      "title": "Contenedores",
+      "type": "link",
+      "url": "/d/ae3c41d7-cea5-4cca-a918-5708706b4d1a/cadvisor-docker-insights",
+      "icon": "cloud",
+      "targetBlank": false
+    },
+    {
+      "title": "Sistema (detalle)",
+      "type": "link",
+      "url": "/d/rYdddlPWk/node-exporter-full",
+      "icon": "sitemap",
+      "targetBlank": false
+    },
+    {
+      "title": "Backups",
+      "type": "link",
+      "url": "/d/backups-overview/backups",
+      "icon": "archive",
+      "targetBlank": false
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "container",
+        "type": "query",
+        "label": "Contenedor",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "query": {
+          "query": "query_result(container_last_seen{container_label_com_docker_compose_project_config_files=\"/home/home/home/docker-compose.yaml\"})",
+          "refId": "StandardVariableQuery"
+        },
+        "regex": "/[{,]\\s*name=\"(?<value>[^\"]+)\"/",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "sort": 1
+      }
+    ]
+  }
+}

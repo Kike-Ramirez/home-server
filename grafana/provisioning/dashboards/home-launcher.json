@@ -1,0 +1,427 @@
+{
+  "uid": "home-launcher",
+  "title": "Home",
+  "tags": [
+    "homelab"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 9,
+  "editable": true,
+  "panels": [
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Estado general",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Internet",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "probe_success{instance=\"1.1.1.1\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "En linea"
+                },
+                "0": {
+                  "text": "Caido"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#FF453A",
+                "value": null
+              },
+              {
+                "color": "#30D158",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "CPU",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 70
+              },
+              {
+                "color": "#FF453A",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "RAM",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 80
+              },
+              {
+                "color": "#FF453A",
+                "value": 95
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Disco",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "100 * (1 - (node_filesystem_avail_bytes{mountpoint=\"/\",fstype!=\"tmpfs\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"tmpfs\"}))",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 75
+              },
+              {
+                "color": "#FF453A",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Backup",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "(time() - backup_last_run_timestamp_seconds) * backup_last_run_success",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 90000
+              },
+              {
+                "color": "#FF453A",
+                "value": 172800
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Dispositivos LAN",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "network_devices_active",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Estado de alertas",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "expr": "sum(grafana_alerting_alerts{state=~\"alerting|pending|error|nodata\"})",
+          "refId": "A",
+          "legendFormat": "Alertas activas"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Sin alertas activas. Todo en orden."
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF453A",
+                "value": 1
+              }
+            ]
+          },
+          "displayName": "Alertas activas",
+          "links": [
+            {
+              "title": "Ver detalle de alertas",
+              "url": "/alerting/list",
+              "targetBlank": false
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:6px 4px 2px;\">\n  <div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;max-width:1300px;\">\n    <a style=\"position:relative;border-radius:8px;padding:14px 16px;min-height:76px;display:flex;align-items:center;gap:12px;text-decoration:none;background:rgba(204,204,220,0.05);border:1px solid rgba(204,204,220,0.12);\" href=\"/d/homelab-overview/homelab-overview\"><div style=\"flex:0 0 auto;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#5794f226;color:#5794f2;\">\ud83c\udfe0</div><div style=\"flex:1 1 auto;min-width:0;\"><h3 style=\"font-size:13px;font-weight:600;color:#ccccdc;margin:0 0 2px;letter-spacing:-0.01em;\">Homelab Overview</h3><p style=\"font-size:11.5px;color:#8e8e9c;margin:0;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">CPU, RAM, disco y backups</p></div><div style=\"flex:0 0 auto;font-size:13px;color:#5a5a68;\">&#8250;</div></a>\n    <a style=\"position:relative;border-radius:8px;padding:14px 16px;min-height:76px;display:flex;align-items:center;gap:12px;text-decoration:none;background:rgba(204,204,220,0.05);border:1px solid rgba(204,204,220,0.12);\" href=\"/d/network-overview/network\"><div style=\"flex:0 0 auto;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#73bf6926;color:#73bf69;\">\ud83c\udf10</div><div style=\"flex:1 1 auto;min-width:0;\"><h3 style=\"font-size:13px;font-weight:600;color:#ccccdc;margin:0 0 2px;letter-spacing:-0.01em;\">Network</h3><p style=\"font-size:11.5px;color:#8e8e9c;margin:0;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">Internet, velocidad, DNS y dispositivos</p></div><div style=\"flex:0 0 auto;font-size:13px;color:#5a5a68;\">&#8250;</div></a>\n    <a style=\"position:relative;border-radius:8px;padding:14px 16px;min-height:76px;display:flex;align-items:center;gap:12px;text-decoration:none;background:rgba(204,204,220,0.05);border:1px solid rgba(204,204,220,0.12);\" href=\"/d/ae3c41d7-cea5-4cca-a918-5708706b4d1a/cadvisor-docker-insights\"><div style=\"flex:0 0 auto;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#33b1e026;color:#33b1e0;\">\ud83d\udc33</div><div style=\"flex:1 1 auto;min-width:0;\"><h3 style=\"font-size:13px;font-weight:600;color:#ccccdc;margin:0 0 2px;letter-spacing:-0.01em;\">Contenedores</h3><p style=\"font-size:11.5px;color:#8e8e9c;margin:0;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">CPU, memoria y reinicios</p></div><div style=\"flex:0 0 auto;font-size:13px;color:#5a5a68;\">&#8250;</div></a>\n    <a style=\"position:relative;border-radius:8px;padding:14px 16px;min-height:76px;display:flex;align-items:center;gap:12px;text-decoration:none;background:rgba(204,204,220,0.05);border:1px solid rgba(204,204,220,0.12);\" href=\"/d/rYdddlPWk/node-exporter-full\"><div style=\"flex:0 0 auto;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#b0b0c026;color:#b0b0c0;\">\ud83d\udda5\ufe0f</div><div style=\"flex:1 1 auto;min-width:0;\"><h3 style=\"font-size:13px;font-weight:600;color:#ccccdc;margin:0 0 2px;letter-spacing:-0.01em;\">Sistema (detalle)</h3><p style=\"font-size:11.5px;color:#8e8e9c;margin:0;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">Metricas detalladas del sistema</p></div><div style=\"flex:0 0 auto;font-size:13px;color:#5a5a68;\">&#8250;</div></a>\n    <a style=\"position:relative;border-radius:8px;padding:14px 16px;min-height:76px;display:flex;align-items:center;gap:12px;text-decoration:none;background:rgba(204,204,220,0.05);border:1px solid rgba(204,204,220,0.12);\" href=\"/alerting/list\"><div style=\"flex:0 0 auto;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#ff983026;color:#ff9830;\">\ud83d\udd14</div><div style=\"flex:1 1 auto;min-width:0;\"><h3 style=\"font-size:13px;font-weight:600;color:#ccccdc;margin:0 0 2px;letter-spacing:-0.01em;\">Alertas</h3><p style=\"font-size:11.5px;color:#8e8e9c;margin:0;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">Reglas activas y su estado</p></div><div style=\"flex:0 0 auto;font-size:13px;color:#5a5a68;\">&#8250;</div></a>\n  </div>\n</div>"
+      }
+    }
+  ],
+  "links": [
+    {
+      "title": "Home",
+      "type": "link",
+      "url": "/d/home-launcher/home",
+      "icon": "home-alt",
+      "targetBlank": false
+    },
+    {
+      "title": "Homelab Overview",
+      "type": "link",
+      "url": "/d/homelab-overview/homelab-overview",
+      "icon": "apps",
+      "targetBlank": false
+    },
+    {
+      "title": "Network",
+      "type": "link",
+      "url": "/d/network-overview/network",
+      "icon": "globe",
+      "targetBlank": false
+    },
+    {
+      "title": "Contenedores",
+      "type": "link",
+      "url": "/d/ae3c41d7-cea5-4cca-a918-5708706b4d1a/cadvisor-docker-insights",
+      "icon": "cloud",
+      "targetBlank": false
+    },
+    {
+      "title": "Sistema (detalle)",
+      "type": "link",
+      "url": "/d/rYdddlPWk/node-exporter-full",
+      "icon": "sitemap",
+      "targetBlank": false
+    },
+    {
+      "title": "Backups",
+      "type": "link",
+      "url": "/d/backups-overview/backups",
+      "icon": "archive",
+      "targetBlank": false
+    }
+  ],
+  "refresh": "1m",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  }
+}

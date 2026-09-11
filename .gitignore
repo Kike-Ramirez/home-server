@@ -1,0 +1,49 @@
+# Secrets / environment
+.env
+*.env
+!.env.example
+
+# Restic backup credentials
+backups/restic-password.txt
+
+# Runtime logs & locks
+backups/*.log
+backups/backup.lock
+backups/webhook-server.log
+backups/metrics/
+
+# Vaultwarden (password manager DB, RSA keys, attachments)
+vaultwarden/data/
+
+# Nginx Proxy Manager (SQLite DB, API keys, Let's Encrypt certs/keys)
+nginx-proxy-manager/data/
+nginx-proxy-manager/letsencrypt/
+
+# Pi-hole (gravity DB, FTL DB, TLS certs)
+pihole/etc-pihole/
+
+# Tailscale node state (auth keys, machine identity)
+tailscale/state/
+
+# Home Assistant runtime state
+homeassistant/config/.storage/
+homeassistant/config/.cloud/
+homeassistant/config/.cache/
+homeassistant/config/deps/
+homeassistant/config/backups/
+homeassistant/config/custom_components/
+homeassistant/config/tts/
+homeassistant/config/secrets.yaml
+homeassistant/config/*.db
+homeassistant/config/*.db-shm
+homeassistant/config/*.db-wal
+homeassistant/config/*.log*
+homeassistant/config/.ha_run.lock
+homeassistant/config/.HA_VERSION
+
+# Prometheus/Grafana data live in named Docker volumes, not bind mounts,
+# so nothing to ignore here for them.
+
+# OS / editor cruft
+.DS_Store
+*.swp

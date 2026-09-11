@@ -1,0 +1,733 @@
+{
+  "uid": "network-overview",
+  "title": "Network",
+  "tags": [
+    "homelab"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 9,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 22,
+      "type": "row",
+      "title": "Resumen",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Internet",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "probe_success{instance=\"1.1.1.1\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "En linea"
+                },
+                "0": {
+                  "text": "Caido"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#FF453A",
+                "value": null
+              },
+              {
+                "color": "#30D158",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Latencia a Internet",
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "probe_duration_seconds{instance=\"1.1.1.1\"} * 1000",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 60
+              },
+              {
+                "color": "#FF453A",
+                "value": 150
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Bajada",
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "last_over_time(speedtest_download_bits_per_second[35m]) / 1000000",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Subida",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "last_over_time(speedtest_upload_bits_per_second[35m]) / 1000000",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "% Bloqueado",
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "pihole_dns_percent_blocked",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#0A84FF",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Dispositivos activos (24h)",
+      "gridPos": {
+        "x": 20,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "network_devices_active",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Dispositivos en la LAN",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 21,
+      "type": "table",
+      "title": "Dispositivos activos (24h)",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "targets": [
+        {
+          "expr": "network_device_last_seen_minutes",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "name": 0,
+              "ip": 1,
+              "mac": 2,
+              "vendor": 3,
+              "Value": 4
+            },
+            "renameByName": {
+              "name": "Nombre",
+              "ip": "IP",
+              "mac": "MAC",
+              "vendor": "Fabricante",
+              "Value": "Hace (min)"
+            }
+          }
+        }
+      ],
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "Hace (min)",
+            "desc": false
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Hace (min)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "m"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 23,
+      "type": "row",
+      "title": "Diagnostico y detalle",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Gateway",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "probe_success{instance=\"192.168.0.1\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "En linea"
+                },
+                "0": {
+                  "text": "Caido"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#FF453A",
+                "value": null
+              },
+              {
+                "color": "#30D158",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Latencia al Gateway",
+      "gridPos": {
+        "x": 6,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "probe_duration_seconds{instance=\"192.168.0.1\"} * 1000",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 20
+              },
+              {
+                "color": "#FF453A",
+                "value": 60
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Ping",
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "last_over_time(speedtest_ping_latency_milliseconds[35m])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Jitter",
+      "gridPos": {
+        "x": 18,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "expr": "last_over_time(speedtest_jitter_latency_milliseconds[35m])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Ping / Jitter (historico)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "targets": [
+        {
+          "expr": "last_over_time(speedtest_ping_latency_milliseconds[35m])",
+          "legendFormat": "ping",
+          "refId": "A"
+        },
+        {
+          "expr": "last_over_time(speedtest_jitter_latency_milliseconds[35m])",
+          "legendFormat": "jitter",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Latencia al Gateway (historico)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "targets": [
+        {
+          "expr": "probe_duration_seconds{instance=\"192.168.0.1\"} * 1000",
+          "legendFormat": "latencia",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Historico de velocidad",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "targets": [
+        {
+          "expr": "last_over_time(speedtest_download_bits_per_second[35m]) / 1000000",
+          "legendFormat": "bajada",
+          "refId": "A"
+        },
+        {
+          "expr": "last_over_time(speedtest_upload_bits_per_second[35m]) / 1000000",
+          "legendFormat": "subida",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Consultas DNS",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 41
+      },
+      "targets": [
+        {
+          "expr": "pihole_dns_queries_total",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Pi-hole API",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 41
+      },
+      "targets": [
+        {
+          "expr": "pihole_up",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "OK"
+                },
+                "0": {
+                  "text": "Error"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#FF453A",
+                "value": null
+              },
+              {
+                "color": "#30D158",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Consultas DNS totales / bloqueadas",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "targets": [
+        {
+          "expr": "pihole_dns_queries_total",
+          "legendFormat": "totales",
+          "refId": "A"
+        },
+        {
+          "expr": "pihole_dns_queries_blocked_total",
+          "legendFormat": "bloqueadas",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Trafico enp2s0",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "targets": [
+        {
+          "expr": "rate(node_network_receive_bytes_total{device=\"enp2s0\"}[5m])",
+          "legendFormat": "rx",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(node_network_transmit_bytes_total{device=\"enp2s0\"}[5m])",
+          "legendFormat": "tx",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "links": [
+    {
+      "title": "Home",
+      "type": "link",
+      "url": "/d/home-launcher/home",
+      "icon": "home-alt",
+      "targetBlank": false
+    },
+    {
+      "title": "Homelab Overview",
+      "type": "link",
+      "url": "/d/homelab-overview/homelab-overview",
+      "icon": "apps",
+      "targetBlank": false
+    },
+    {
+      "title": "Network",
+      "type": "link",
+      "url": "/d/network-overview/network",
+      "icon": "globe",
+      "targetBlank": false
+    },
+    {
+      "title": "Contenedores",
+      "type": "link",
+      "url": "/d/ae3c41d7-cea5-4cca-a918-5708706b4d1a/cadvisor-docker-insights",
+      "icon": "cloud",
+      "targetBlank": false
+    },
+    {
+      "title": "Sistema (detalle)",
+      "type": "link",
+      "url": "/d/rYdddlPWk/node-exporter-full",
+      "icon": "sitemap",
+      "targetBlank": false
+    },
+    {
+      "title": "Backups",
+      "type": "link",
+      "url": "/d/backups-overview/backups",
+      "icon": "archive",
+      "targetBlank": false
+    }
+  ]
+}

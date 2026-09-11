@@ -1,0 +1,319 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: infra-alerts
+    folder: Alerts
+    interval: 1m
+    rules:
+      - uid: disk-space-low
+        title: "Disco raiz por debajo del 15% libre"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              instant: true
+              range: false
+              expr: 100 * (node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"})
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [15]
+        noDataState: NoData
+        execErrState: Alerting
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Espacio libre en / por debajo del 15% en el Optiplex."
+
+      - uid: target-down
+        title: "Un exporter/servicio monitorizado ha dejado de responder"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              instant: true
+              range: false
+              expr: up
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+        noDataState: NoData
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "El target {{ $labels.instance }} (job {{ $labels.job }}) lleva caido mas de 5 minutos."
+
+      - uid: container-restart-loop
+        title: "Un contenedor se esta reiniciando repetidamente"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              instant: true
+              range: false
+              expr: sum by (name) (changes(container_start_time_seconds{name=~".+"}[15m]))
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [2]
+        noDataState: OK
+        execErrState: Alerting
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "El contenedor {{ $labels.name }} se ha reiniciado mas de 2 veces en 15 minutos (posible crash loop)."
+
+      - uid: backup-stale
+        title: "El backup nocturno lleva mas de 26h sin completarse con exito"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              instant: true
+              range: false
+              expr: (time() - backup_last_run_timestamp_seconds) * backup_last_run_success + (1 - backup_last_run_success) * 999999
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [93600]
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "El ultimo backup con exito tiene mas de 26h, o el ultimo intento fallo. Revisa backups/backup.log."
+
+      - uid: pihole-down
+        title: "Pi-hole no responde"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              instant: true
+              range: false
+              expr: pihole_up
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "network-metrics.sh no ha podido contactar con la API de Pi-hole en los ultimos 10 minutos."
+
+      - uid: service-http-down
+        title: "Un servicio web (Vaultwarden / NPM / Home Assistant) no responde"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              instant: true
+              range: false
+              expr: probe_success{job="blackbox-http"}
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "El servicio {{ $labels.service }} lleva caido (sin responder por HTTP) mas de 5 minutos."
+
+      - uid: container-not-running
+        title: "Un contenedor del docker-compose no esta corriendo"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              instant: true
+              range: false
+              expr: container_docker_running
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "El contenedor {{ $labels.name }} deberia estar corriendo (esta en docker-compose.yaml) pero no lo esta."
+
+      - uid: backup-drive-low-space
+        title: "El disco USB de backups esta por debajo del 10% libre"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              instant: true
+              range: false
+              expr: 100 * (backup_drive_free_bytes / backup_drive_total_bytes)
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [10]
+        noDataState: OK
+        execErrState: Alerting
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "El disco USB de backups esta por debajo del 10% de espacio libre."

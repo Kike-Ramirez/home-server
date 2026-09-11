@@ -1,0 +1,578 @@
+{
+  "uid": "backups-overview",
+  "title": "Backups",
+  "tags": [
+    "homelab"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 5,
+  "editable": true,
+  "refresh": "1m",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Home",
+      "type": "link",
+      "url": "/d/home-launcher/home",
+      "icon": "home-alt",
+      "targetBlank": false
+    },
+    {
+      "title": "Homelab Overview",
+      "type": "link",
+      "url": "/d/homelab-overview/homelab-overview",
+      "icon": "apps",
+      "targetBlank": false
+    },
+    {
+      "title": "Network",
+      "type": "link",
+      "url": "/d/network-overview/network",
+      "icon": "globe",
+      "targetBlank": false
+    },
+    {
+      "title": "Contenedores",
+      "type": "link",
+      "url": "/d/ae3c41d7-cea5-4cca-a918-5708706b4d1a/cadvisor-docker-insights",
+      "icon": "cloud",
+      "targetBlank": false
+    },
+    {
+      "title": "Sistema (detalle)",
+      "type": "link",
+      "url": "/d/rYdddlPWk/node-exporter-full",
+      "icon": "sitemap",
+      "targetBlank": false
+    },
+    {
+      "title": "Backups",
+      "type": "link",
+      "url": "/d/backups-overview/backups",
+      "icon": "archive",
+      "targetBlank": false
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "token",
+        "type": "textbox",
+        "label": "Token backup",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "description": "Token del webhook de backup (backups/webhook-server.py). No se guarda en este dashboard."
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Estado",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Ultimo backup",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "backup_last_run_success",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Correcto"
+                },
+                "0": {
+                  "text": "Con error"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#FF453A",
+                "value": null
+              },
+              {
+                "color": "#30D158",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Hace",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "time() - backup_last_run_timestamp_seconds",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Duracion",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "backup_last_run_duration_seconds",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Espacio libre USB",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "100 * (backup_drive_free_bytes / backup_drive_total_bytes)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#FF453A",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 10
+              },
+              {
+                "color": "#30D158",
+                "value": 20
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Snapshots guardados",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "backup_snapshots_total",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Tamano del repositorio",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "backup_repo_size_bytes",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Configuracion",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      }
+    },
+    {
+      "id": 9,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:4px 8px;\"><table style=\"width:100%;border-collapse:collapse;font-size:12px;\"><tr><th style=\"text-align:left;padding:6px 10px;color:#8e8e9c;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid rgba(204,204,220,0.15);width:190px;\">Politica</th><th style=\"text-align:left;padding:6px 10px;color:#8e8e9c;font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid rgba(204,204,220,0.15);\">Detalle</th></tr>\n    <tr><td style=\"padding:7px 10px;color:#ccccdc;font-weight:600;white-space:nowrap;border-bottom:1px solid rgba(204,204,220,0.08);vertical-align:top;border-left:3px solid #5794f2;\"><span style=\"margin-right:6px;\">\ud83d\udd12</span>Motor</td><td style=\"padding:7px 10px;color:#8e8e9c;line-height:1.4;border-bottom:1px solid rgba(204,204,220,0.08);\">restic \u2014 copias cifradas y deduplicadas en un unico repositorio (contenedor restic/restic via cron)</td></tr>\n    <tr><td style=\"padding:7px 10px;color:#ccccdc;font-weight:600;white-space:nowrap;border-bottom:1px solid rgba(204,204,220,0.08);vertical-align:top;border-left:3px solid #33b1e0;\"><span style=\"margin-right:6px;\">\ud83d\udcbe</span>Destino</td><td style=\"padding:7px 10px;color:#8e8e9c;line-height:1.4;border-bottom:1px solid rgba(204,204,220,0.08);\">USB 2TB (NTFS) en /media/home/home-backups</td></tr>\n    <tr><td style=\"padding:7px 10px;color:#ccccdc;font-weight:600;white-space:nowrap;border-bottom:1px solid rgba(204,204,220,0.08);vertical-align:top;border-left:3px solid #ff9830;\"><span style=\"margin-right:6px;\">\u23f0</span>Diario \u00b7 03:30</td><td style=\"padding:7px 10px;color:#8e8e9c;line-height:1.4;border-bottom:1px solid rgba(204,204,220,0.08);\">Vaultwarden, Pi-hole, Nginx Proxy Manager, Home Assistant, Grafana (provisioning) \u2014 retiene 7 diarios / 4 semanales / 6 mensuales, purga automatica</td></tr>\n    <tr><td style=\"padding:7px 10px;color:#ccccdc;font-weight:600;white-space:nowrap;border-bottom:1px solid rgba(204,204,220,0.08);vertical-align:top;border-left:3px solid #b877d9;\"><span style=\"margin-right:6px;\">\ud83d\udcc5</span>Mensual \u00b7 dia 1, 00:00</td><td style=\"padding:7px 10px;color:#8e8e9c;line-height:1.4;border-bottom:1px solid rgba(204,204,220,0.08);\">Todo lo anterior + docker-compose.yaml, .env, config. Prometheus/Blackbox, Tailscale y BD de Grafana \u2014 se conserva PARA SIEMPRE, la purga automatica nunca lo toca</td></tr>\n    <tr><td style=\"padding:7px 10px;color:#ccccdc;font-weight:600;white-space:nowrap;border-bottom:1px solid rgba(204,204,220,0.08);vertical-align:top;border-left:3px solid #73bf69;\"><span style=\"margin-right:6px;\">\ud83d\udd01</span>Deduplicacion</td><td style=\"padding:7px 10px;color:#8e8e9c;line-height:1.4;border-bottom:1px solid rgba(204,204,220,0.08);\">Los ficheros identicos entre el backup diario y el mensual se guardan una sola vez</td></tr></table></div>"
+      }
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Historico",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Tamano del repositorio (historico)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 12
+      },
+      "targets": [
+        {
+          "expr": "backup_repo_size_bytes",
+          "legendFormat": "repositorio",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Espacio libre en el USB (historico)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 12
+      },
+      "targets": [
+        {
+          "expr": "backup_drive_free_bytes",
+          "legendFormat": "libre",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Backups disponibles (historico)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 12
+      },
+      "targets": [
+        {
+          "expr": "backup_snapshots_by_type_total{type=\"nightly\"}",
+          "legendFormat": "diarios",
+          "refId": "A"
+        },
+        {
+          "expr": "backup_snapshots_by_type_total{type=\"monthly-full\"}",
+          "legendFormat": "mensuales (permanentes)",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Backup manual",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      }
+    },
+    {
+      "id": 11,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:6px 4px;\"><a style=\"display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:8px;max-width:560px;text-decoration:none;background:rgba(87,148,242,0.08);border:1px solid rgba(87,148,242,0.35);\" href=\"http://192.168.0.100:8088/backup-now?token=${token}\" target=\"_blank\"><div style=\"flex:0 0 auto;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#5794f226;color:#5794f2;\">\ud83d\ude80</div><div><h3 style=\"font-size:13px;font-weight:600;color:#ccccdc;margin:0 0 3px;\">Ejecutar backup ahora</h3><p style=\"font-size:11.5px;color:#8e8e9c;margin:0;line-height:1.4;\">Lanza restic fuera del horario habitual (1-2 min). Pega el token en el desplegable de arriba (junto al selector de fecha) la primera vez.</p></div></a></div>"
+      }
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Snapshots recientes",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      }
+    },
+    {
+      "id": 18,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:6px 4px;font-size:11.5px;color:#8e8e9c;line-height:1.4;\"><b>Localizacion:</b> todos los snapshots viven en el mismo repositorio restic <code>/media/home/home-backups/home-backups</code> (disco USB), diferenciados por su tag.</div>"
+      }
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "Todos los backups disponibles ahora mismo",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "targets": [
+        {
+          "expr": "backup_snapshot_size_bytes",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "date": 0,
+              "id": 1,
+              "type": 2,
+              "Value": 3,
+              "content": 4
+            },
+            "renameByName": {
+              "date": "Fecha",
+              "id": "ID",
+              "type": "Tipo",
+              "Value": "Tamano",
+              "content": "Contenido"
+            }
+          }
+        }
+      ],
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "Fecha",
+            "desc": true
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Tamano"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "decbytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Contenido"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 420
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
