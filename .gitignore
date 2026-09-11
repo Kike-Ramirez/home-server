@@ -47,3 +47,7 @@ homeassistant/config/.HA_VERSION
 # OS / editor cruft
 .DS_Store
 *.swp
+
+# Python bytecode cache
+__pycache__/
+*.pyc

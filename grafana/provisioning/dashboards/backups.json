@@ -69,6 +69,17 @@
           "value": ""
         },
         "description": "Token del webhook de backup (backups/webhook-server.py). No se guarda en este dashboard."
+      },
+      {
+        "name": "snapshot_id",
+        "type": "textbox",
+        "label": "ID snapshot a restaurar",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "description": "Copia el ID de la columna 'ID' de la tabla 'Todos los backups disponibles ahora mismo' de mas abajo."
       }
     ]
   },
@@ -167,7 +178,23 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "s",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 86400
+              },
+              {
+                "color": "#FF453A",
+                "value": 93600
+              }
+            ]
+          }
         },
         "overrides": []
       }
@@ -307,7 +334,19 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "decbytes"
+          "unit": "decbytes",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#30D158",
+                "value": null
+              },
+              {
+                "color": "#FF9F0A",
+                "value": 1000000000
+              }
+            ]
+          }
         },
         "overrides": []
       }
@@ -572,6 +611,34 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "id": 19,
+      "type": "row",
+      "title": "Restaurar backup",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      }
+    },
+    {
+      "id": 20,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:6px 4px;\"><a style=\"display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:8px;max-width:560px;text-decoration:none;background:rgba(255,69,58,0.08);border:1px solid rgba(255,69,58,0.35);\" href=\"http://192.168.0.100:8088/restore?token=${token}&snapshot=${snapshot_id}\" target=\"_blank\"><div style=\"flex:0 0 auto;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#ff453a26;color:#FF453A;\">♻️</div><div><h3 style=\"font-size:13px;font-weight:600;color:#ccccdc;margin:0 0 3px;\">Restaurar backup</h3><p style=\"font-size:11.5px;color:#8e8e9c;margin:0;line-height:1.4;\">Sobrescribe datos en vivo con el snapshot elegido. Pega el token y el ID del snapshot (columna 'ID' de la tabla de arriba) en el desplegable de arriba antes de pulsar. Se pedira confirmacion explicita antes de ejecutar nada, y se crea un snapshot de seguridad automatico por si hay que deshacerlo.</p></div></a></div>"
       }
     }
   ]
