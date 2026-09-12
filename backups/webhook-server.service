@@ -1,0 +1,18 @@
+[Unit]
+Description=Webhook de backups (backup-now/restore para el dashboard "Backups")
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=home
+WorkingDirectory=/home/home/home/backups
+EnvironmentFile=/home/home/home/.env
+ExecStart=/usr/bin/python3 -u webhook-server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/home/home/backups/webhook-server.log
+StandardError=append:/home/home/home/backups/webhook-server.log
+
+[Install]
+WantedBy=multi-user.target

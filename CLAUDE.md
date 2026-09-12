@@ -30,7 +30,7 @@ Infraestructura de un homelab casero (Dell Optiplex, dominio `kikeramirez.org`) 
 - `backup.sh` (cron 03:30): nightly, tag `nightly`, rotación 7d/4w/6m.
 - `backup-monthly.sh` (cron día 1 00:00): `monthly-full`, **conservado para siempre** (`--keep-tag monthly-full`), incluye además `docker-compose.yaml`, `.env`, config Prometheus/Blackbox, estado Tailscale y BD de Grafana.
 - `restore.sh`: restaura un snapshot completo sobre el sistema en vivo. Crea automáticamente un snapshot `pre-restore` de seguridad, para el stack, restaura, y lo levanta de nuevo.
-- `webhook-server.py` (puerto 8088, en el **host** vía `cron @reboot`, no contenedorizado a propósito para evitar Docker-in-Docker): expone `backup-now`/`restore`/`restore-confirm` para el dashboard "Backups". Token en `.env`, **nunca** se escribe en JSON de dashboards (se detectó como fuga de credencial una vez) — el dashboard usa una template variable de tipo textbox vacía que cada usuario rellena una vez y guarda como bookmark.
+- `webhook-server.py` (puerto 8088, en el **host** vía servicio systemd `webhook-server.service`, no contenedorizado a propósito para evitar Docker-in-Docker): expone `backup-now`/`restore`/`restore-confirm` para el dashboard "Backups". Token en `.env`, **nunca** se escribe en JSON de dashboards (se detectó como fuga de credencial una vez) — el dashboard usa una template variable de tipo textbox vacía que cada usuario rellena una vez y guarda como bookmark.
 - `container-health-metrics.sh` (cron cada minuto) y `network-metrics.sh` (Pi-hole) alimentan el textfile collector de node-exporter.
 
 > ⚠️ **`restore.sh` sobrescribe datos en producción.** Aunque crea un `pre-restore` automático, nunca lo ejecutes sin que el usuario lo pida explícitamente y confirme.

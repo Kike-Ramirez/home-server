@@ -143,14 +143,34 @@ certificados Let's Encrypt desde ahí.
    ```
 6. `docker compose restart grafana` (para que recoja `TELEGRAM_API_TOKEN`/`TELEGRAM_CLIENT_ID` y pueda mandar alertas por Telegram).
 
-## 10. Mantenimiento automático del sistema (Ubuntu)
+## 10. Webhook de backups como servicio systemd
+
+`webhook-server.py` corre en el **host** (no contenedorizado, a propósito,
+para evitar Docker-in-Docker al lanzar `docker run` de restic) y expone
+`backup-now`/`restore`/`restore-confirm` para el dashboard "Backups". Se
+gestiona con systemd en vez de `@reboot`/`nohup` para que se reinicie solo
+si muere:
+
+```bash
+sudo cp backups/webhook-server.service /etc/systemd/system/webhook-server.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now webhook-server
+sudo systemctl status webhook-server --no-pager
+curl -s http://localhost:8088/healthz
+```
+
+`EnvironmentFile=/home/home/home/.env` en la unit le da acceso a
+`BACKUP_TRIGGER_TOKEN` (y al resto de `.env`, igual que hace `docker
+compose`) — ajusta esa ruta si no clonaste el repo en `/home/home/home`.
+
+## 11. Mantenimiento automático del sistema (Ubuntu)
 
 Esto es config del **host**, no del repo (no hay nada que versionar salvo lo
 que ya está en `backups/docker-prune.sh` y el crontab del siguiente paso).
 Se necesita para dos cosas: que el sistema operativo se actualice solo (no
 solo los contenedores) y que se avise por correo si algo falla.
 
-### 10.1 Actualizaciones de seguridad automáticas (`unattended-upgrades`)
+### 11.1 Actualizaciones de seguridad automáticas (`unattended-upgrades`)
 
 Por qué: sin esto, los parches de seguridad del SO (kernel, OpenSSL, etc.)
 solo se aplican si haces `apt upgrade` a mano. En una máquina que corre
@@ -176,7 +196,7 @@ Config fina en `/etc/apt/apt.conf.d/50unattended-upgrades` (por defecto solo
 actualiza el repo `-security`; ajusta `Allowed-Origins` y
 `Automatic-Reboot` si quieres más o reinicios automáticos tras kernel).
 
-### 10.2 Correo de aviso si `unattended-upgrades` falla
+### 11.2 Correo de aviso si `unattended-upgrades` falla
 
 Por qué: sin un MTA local, `unattended-upgrades` no tiene forma de mandar
 correo aunque se lo pidas en su config — necesita algo detrás del binario
@@ -246,7 +266,7 @@ sudo msmtp -a gmail <tu-email> <<< "Test unattended-upgrades"
 echo "exit=$?"   # debe dar 0, sin ningún mensaje de msmtp
 ```
 
-## 11. Crontab
+## 12. Crontab
 
 ```bash
 crontab -e
@@ -261,15 +281,17 @@ Pega exactamente esto (ajusta rutas solo si no clonaste en `/home/home/home`):
 * * * * * /home/home/home/backups/container-health-metrics.sh
 0 8 * * * /usr/bin/python3 /home/home/home/backups/daily-report.py >> /home/home/home/backups/daily-report.log 2>&1
 0 4 * * 0 /home/home/home/backups/docker-prune.sh
-@reboot sleep 20 && BACKUP_TRIGGER_TOKEN=$(grep '^BACKUP_TRIGGER_TOKEN=' /home/home/home/.env | cut -d= -f2-) nohup python3 /home/home/home/backups/webhook-server.py >> /home/home/home/backups/webhook-server.log 2>&1 &
 ```
 
-## 12. Verificación final
+(el webhook de backups ya no va por cron — ver paso 10, corre como servicio systemd.)
+
+## 13. Verificación final
 
 - `docker compose ps` — todo arriba y "healthy".
 - Grafana accesible en tu dominio, dashboards cargados (`grafana/provisioning/dashboards/`).
 - `systemctl status sebastian-bot` — `active (running)`.
 - Escribe al bot en el grupo de Telegram y confirma que responde.
+- `systemctl status webhook-server` — `active (running)`; `curl http://localhost:8088/healthz` responde 200.
 - Lanza un backup de prueba: `backups/backup.sh` a mano y revisa `backups/backup.log`.
 - Confirma que llega el informe diario o espera al cron de las 08:00.
 - `sudo msmtp -a gmail <tu-email> <<< "test"` sin errores — confirma que
