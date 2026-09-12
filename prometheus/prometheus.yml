@@ -52,6 +52,8 @@ scrape_configs:
         labels: {service: nginx-proxy-manager}
       - targets: ['http://192.168.0.100:8123/']
         labels: {service: homeassistant}
+      - targets: ['http://192.168.0.100:8088/healthz']
+        labels: {service: webhook-server}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

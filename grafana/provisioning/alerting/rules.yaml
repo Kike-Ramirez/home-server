@@ -202,7 +202,7 @@ groups:
           summary: "network-metrics.sh no ha podido contactar con la API de Pi-hole en los ultimos 10 minutos."
 
       - uid: service-http-down
-        title: "Un servicio web (Vaultwarden / NPM / Home Assistant) no responde"
+        title: "Un servicio web (Vaultwarden / NPM / Home Assistant / webhook-server) no responde"
         condition: C
         data:
           - refId: A
