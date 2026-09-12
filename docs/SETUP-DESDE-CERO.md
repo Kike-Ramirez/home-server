@@ -45,6 +45,7 @@ Rellena cada variable:
 | `SIGNUPS_ALLOWED` | `false` salvo que quieras registro abierto. |
 | `VAULTWARDEN_ADMIN_TOKEN` | `openssl rand -base64 48` |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | Cuenta Gmail + [contraseña de aplicación](https://myaccount.google.com/apppasswords). |
+| `GF_SECURITY_ADMIN_USER` / `GF_SECURITY_ADMIN_PASSWORD` | `admin` + `openssl rand -base64 24` — evita que Grafana quede en `admin/admin` si se recrea el volumen `grafana_data`. |
 | `TS_AUTHKEY` | Tailscale admin console → Settings → Keys → generar una auth key reusable. |
 | `BACKUP_TRIGGER_TOKEN` | `openssl rand -hex 32` — lo usará el dashboard "Backups" para llamar al webhook. |
 | `TELEGRAM_API_TOKEN` | El que te dio `@BotFather` al crear el bot. |
