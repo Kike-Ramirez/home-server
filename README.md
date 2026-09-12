@@ -2,7 +2,7 @@
 
 > Infraestructura de un homelab casero (Dell Optiplex), gestionada 100% como código: `docker-compose.yaml` + configuración versionada, con monitorización, alertado, backups y restore automatizados.
 
-![Docker Compose](https://img.shields.io/badge/docker--compose-11%20servicios-2496ED?logo=docker&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/docker--compose-10%20servicios-2496ED?logo=docker&logoColor=white)
 ![Grafana](https://img.shields.io/badge/dashboards-Grafana-F46800?logo=grafana&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/métricas-Prometheus-E6522C?logo=prometheus&logoColor=white)
 ![restic](https://img.shields.io/badge/backups-restic-2C3E50?logo=backblaze&logoColor=white)
@@ -38,8 +38,12 @@
 | `prometheus` | Almacena las métricas (retención 730 días). |
 | `grafana` | Dashboards, en `https://grafana.kikeramirez.org`. |
 | `blackbox-exporter` | Sondas de disponibilidad HTTP/ICMP. |
-| `speedtest-exporter` | Métricas periódicas de velocidad de conexión. |
 | `tailscale` | VPN mesh / acceso remoto, anuncia la ruta a la LAN. |
+
+Velocidad de conexión (Speedtest.net) y dispositivos conectados a la LAN
+(Nmap Tracker) se recopilan en Home Assistant, no en un exporter aparte:
+Prometheus los recoge directamente vía `/api/prometheus` de HA (ver más
+abajo).
 
 ## Arquitectura
 
@@ -49,12 +53,11 @@ flowchart LR
         NE[node-exporter]
         CA[cadvisor]
         BB[blackbox-exporter]
-        ST[speedtest-exporter]
         TF[(textfile collector<br/>backups + red)]
     end
 
     subgraph Apps
-        HA[Home Assistant]
+        HA[Home Assistant<br/>Speedtest + Nmap Tracker]
         PI[Pi-hole]
         VW[Vaultwarden]
         NPM[Nginx Proxy Manager]
@@ -63,7 +66,7 @@ flowchart LR
     NE --> PR[(Prometheus)]
     CA --> PR
     BB --> PR
-    ST --> PR
+    HA -->|/api/prometheus| PR
     TF --> NE
     HA & PI & VW & NPM -. sondas HTTP .-> BB
 
@@ -84,8 +87,9 @@ flowchart LR
   Network, Contenedores, Sistema (detalle), Backups), estilo sobrio y
   consistente, todos enlazados entre sí.
 - **Prometheus** (`prometheus/prometheus.yml`): scrapea node-exporter,
-  cAdvisor, blackbox-exporter (ICMP + HTTP), speedtest-exporter, y a sí
-  mismo/Grafana. Retención de 730 días.
+  cAdvisor, blackbox-exporter (ICMP + HTTP), Home Assistant (Speedtest +
+  Nmap Tracker, vía `/api/prometheus` con token en `prometheus/ha-token.txt`,
+  no versionado), y a sí mismo/Grafana. Retención de 730 días.
 - **Alerting** (`grafana/provisioning/alerting/rules.yaml`): disco lleno,
   cualquier target caído, contenedores en crash-loop o parados, backup
   atrasado, Pi-hole/Vaultwarden/NPM/Home Assistant inalcanzables. Notifica
@@ -154,6 +158,8 @@ Nada de lo siguiente se versiona (ver `.gitignore`):
 
 - `.env` y cualquier `*.env` (SMTP, tokens, contraseñas de Pi-hole/Vaultwarden/Tailscale).
 - `backups/restic-password.txt` (clave de cifrado del repositorio de backups).
+- `prometheus/ha-token.txt` (token de larga duración de Home Assistant que usa
+  Prometheus para leer `/api/prometheus`).
 - Datos runtime con contenido sensible: `vaultwarden/data/`, `pihole/etc-pihole/`,
   `nginx-proxy-manager/{data,letsencrypt}/`, `tailscale/state/`, y las bases de
   datos/estado/`secrets.yaml` de `homeassistant/config/`.

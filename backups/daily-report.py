@@ -267,15 +267,21 @@ def key_metrics():
     if active_devices is not None:
         metrics.append(("Dispositivos activos en la red (24h)", f"{int(active_devices)}"))
 
-    speedtest_down = scalar("speedtest_download_bits_per_second")
+    speedtest_down = scalar(
+        'homeassistant_sensor_data_rate_mbit_per_s{entity="sensor.speedtest_descarga"}'
+    )
     if speedtest_down is not None:
-        metrics.append(("Velocidad bajada (ultimo speedtest)", f"{speedtest_down / 1e6:.0f} Mbps"))
+        metrics.append(("Velocidad bajada (ultimo speedtest)", f"{speedtest_down:.0f} Mbps"))
 
-    speedtest_up = scalar("speedtest_upload_bits_per_second")
+    speedtest_up = scalar(
+        'homeassistant_sensor_data_rate_mbit_per_s{entity="sensor.speedtest_subida"}'
+    )
     if speedtest_up is not None:
-        metrics.append(("Velocidad subida (ultimo speedtest)", f"{speedtest_up / 1e6:.0f} Mbps"))
+        metrics.append(("Velocidad subida (ultimo speedtest)", f"{speedtest_up:.0f} Mbps"))
 
-    speedtest_ping = scalar("speedtest_ping_latency_milliseconds")
+    speedtest_ping = scalar(
+        'homeassistant_sensor_duration_ms{entity="sensor.speedtest_ping"}'
+    )
     if speedtest_ping is not None:
         metrics.append(("Latencia (ultimo speedtest)", f"{speedtest_ping:.0f} ms"))
 

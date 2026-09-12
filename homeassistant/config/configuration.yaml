@@ -9,6 +9,18 @@ http:
     - 127.0.0.1
     - ::1
 
+# Expone /api/prometheus para que Prometheus recopile aqui los sensores de
+# Speedtest y los device_tracker de Nmap Tracker/router, en vez de tener
+# exporters propios corriendo fuera de HA para lo mismo.
+prometheus:
+  filter:
+    include_domains:
+      - device_tracker
+    include_entities:
+      - sensor.speedtest_ping
+      - sensor.speedtest_descarga
+      - sensor.speedtest_subida
+
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes

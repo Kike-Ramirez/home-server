@@ -6,6 +6,10 @@
 # Restic backup credentials
 backups/restic-password.txt
 
+# Token de larga duracion de Home Assistant, usado por Prometheus para
+# leer /api/prometheus
+prometheus/ha-token.txt
+
 # Runtime logs & locks
 backups/*.log
 backups/backup.lock

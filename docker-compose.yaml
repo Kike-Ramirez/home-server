@@ -125,6 +125,7 @@ services:
       - '--storage.tsdb.retention.time=730d'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/ha-token.txt:/etc/prometheus/ha-token.txt:ro
       - prometheus_data:/prometheus
     ports:
       - '9090:9090'
@@ -178,22 +179,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-
-  speedtest-exporter:
-    image: miguelndecarvalho/speedtest-exporter:v3.5.4@sha256:f1064d49124c7fc45faabb87c6c876a2fd04e92b3dc14d4b871301217ba30fed
-    container_name: speedtest-exporter
-    restart: unless-stopped
-    ports:
-      - '9798:9798'
-    healthcheck:
-      # override the image's default healthcheck: it probes "localhost",
-      # which resolves to ::1 first -- the app only binds IPv4 (0.0.0.0),
-      # so it was always "connection refused" even though the service works.
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:9798/']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
 
   tailscale:
     image: tailscale/tailscale:v1.102.3@sha256:8c42c4574ab066384fcb72f69e086a2ff1dd3652eb6f56856cee34bcf0d2f680

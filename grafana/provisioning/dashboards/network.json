@@ -6,7 +6,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 9,
+  "version": 11,
   "refresh": "1m",
   "time": {
     "from": "now-24h",
@@ -132,7 +132,7 @@
       },
       "targets": [
         {
-          "expr": "last_over_time(speedtest_download_bits_per_second[35m]) / 1000000",
+          "expr": "last_over_time(homeassistant_sensor_data_rate_mbit_per_s{entity=\"sensor.speedtest_descarga\"}[35m])",
           "refId": "A"
         }
       ],
@@ -156,7 +156,7 @@
       },
       "targets": [
         {
-          "expr": "last_over_time(speedtest_upload_bits_per_second[35m]) / 1000000",
+          "expr": "last_over_time(homeassistant_sensor_data_rate_mbit_per_s{entity=\"sensor.speedtest_subida\"}[35m])",
           "refId": "A"
         }
       ],
@@ -431,7 +431,7 @@
       },
       "targets": [
         {
-          "expr": "last_over_time(speedtest_ping_latency_milliseconds[35m])",
+          "expr": "last_over_time(homeassistant_sensor_duration_ms{entity=\"sensor.speedtest_ping\"}[35m])",
           "refId": "A"
         }
       ],
@@ -444,33 +444,9 @@
       }
     },
     {
-      "id": 10,
-      "type": "stat",
-      "title": "Jitter",
-      "gridPos": {
-        "x": 18,
-        "y": 21,
-        "w": 6,
-        "h": 4
-      },
-      "targets": [
-        {
-          "expr": "last_over_time(speedtest_jitter_latency_milliseconds[35m])",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms",
-          "decimals": 2
-        },
-        "overrides": []
-      }
-    },
-    {
       "id": 24,
       "type": "timeseries",
-      "title": "Ping / Jitter (historico)",
+      "title": "Ping (historico)",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -479,14 +455,9 @@
       },
       "targets": [
         {
-          "expr": "last_over_time(speedtest_ping_latency_milliseconds[35m])",
+          "expr": "last_over_time(homeassistant_sensor_duration_ms{entity=\"sensor.speedtest_ping\"}[35m])",
           "legendFormat": "ping",
           "refId": "A"
-        },
-        {
-          "expr": "last_over_time(speedtest_jitter_latency_milliseconds[35m])",
-          "legendFormat": "jitter",
-          "refId": "B"
         }
       ],
       "fieldConfig": {
@@ -532,12 +503,12 @@
       },
       "targets": [
         {
-          "expr": "last_over_time(speedtest_download_bits_per_second[35m]) / 1000000",
+          "expr": "last_over_time(homeassistant_sensor_data_rate_mbit_per_s{entity=\"sensor.speedtest_descarga\"}[35m])",
           "legendFormat": "bajada",
           "refId": "A"
         },
         {
-          "expr": "last_over_time(speedtest_upload_bits_per_second[35m]) / 1000000",
+          "expr": "last_over_time(homeassistant_sensor_data_rate_mbit_per_s{entity=\"sensor.speedtest_subida\"}[35m])",
           "legendFormat": "subida",
           "refId": "B"
         }
