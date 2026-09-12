@@ -142,7 +142,110 @@ certificados Let's Encrypt desde ahí.
    ```
 6. `docker compose restart grafana` (para que recoja `TELEGRAM_API_TOKEN`/`TELEGRAM_CLIENT_ID` y pueda mandar alertas por Telegram).
 
-## 10. Crontab
+## 10. Mantenimiento automático del sistema (Ubuntu)
+
+Esto es config del **host**, no del repo (no hay nada que versionar salvo lo
+que ya está en `backups/docker-prune.sh` y el crontab del siguiente paso).
+Se necesita para dos cosas: que el sistema operativo se actualice solo (no
+solo los contenedores) y que se avise por correo si algo falla.
+
+### 10.1 Actualizaciones de seguridad automáticas (`unattended-upgrades`)
+
+Por qué: sin esto, los parches de seguridad del SO (kernel, OpenSSL, etc.)
+solo se aplican si haces `apt upgrade` a mano. En una máquina que corre
+servicios expuestos a internet (Nginx Proxy Manager, Vaultwarden) conviene
+que al menos los parches de seguridad se apliquen solos.
+
+```bash
+sudo apt install unattended-upgrades apt-listchanges
+sudo dpkg-reconfigure --priority=low unattended-upgrades
+```
+
+Esto escribe `APT::Periodic::Unattended-Upgrade "1";` en
+`/etc/apt/apt.conf.d/20auto-upgrades`. No hace falta timer propio: lo
+disparan los timers de systemd de APT (`apt-daily.timer` para refrescar el
+índice, `apt-daily-upgrade.timer` para aplicar las actualizaciones) — ya
+vienen con el paquete `apt`, comprueba que estén activos:
+
+```bash
+systemctl list-timers | grep apt
+```
+
+Config fina en `/etc/apt/apt.conf.d/50unattended-upgrades` (por defecto solo
+actualiza el repo `-security`; ajusta `Allowed-Origins` y
+`Automatic-Reboot` si quieres más o reinicios automáticos tras kernel).
+
+### 10.2 Correo de aviso si `unattended-upgrades` falla
+
+Por qué: sin un MTA local, `unattended-upgrades` no tiene forma de mandar
+correo aunque se lo pidas en su config — necesita algo detrás del binario
+`/usr/sbin/sendmail`. Reutilizamos el SMTP de Gmail que ya está en `.env`
+(el mismo que usan Grafana/Vaultwarden/`daily-report.py`), en vez de montar
+un Postfix completo.
+
+```bash
+sudo apt install msmtp msmtp-mta
+```
+
+Crea `/etc/msmtprc` (usa las credenciales `SMTP_USERNAME`/`SMTP_PASSWORD` de
+tu `.env`):
+
+```
+defaults
+auth           on
+tls            on
+tls_trust_file /etc/ssl/certs/ca-certificates.crt
+logfile        /var/log/msmtp.log
+
+account        gmail
+host           smtp.gmail.com
+port           587
+from           <SMTP_USERNAME>
+user           <SMTP_USERNAME>
+password       <SMTP_PASSWORD>
+
+account default : gmail
+```
+
+```bash
+sudo chown root:root /etc/msmtprc
+sudo chmod 600 /etc/msmtprc
+```
+
+`msmtp-mta` ya deja `/usr/sbin/sendmail` apuntando a `msmtp` — no hay que
+tocar `update-alternatives`.
+
+Luego, en `/etc/apt/apt.conf.d/50unattended-upgrades`:
+
+```
+Unattended-Upgrade::Mail "<tu-email>";
+Unattended-Upgrade::MailReport "only-on-error";
+```
+
+**AppArmor confina el binario `msmtp`** (perfil propio del paquete) y por
+defecto no le deja ni crear ni bloquear su propio logfile fuera de las rutas
+que trae el perfil — verás en `dmesg` algo como
+`apparmor="DENIED" operation="mknod"` o `operation="file_lock"` sobre
+`/var/log/msmtp.log`. Dale permiso explícito con un override local (no
+edites el perfil del paquete directamente, se sobrescribiría en updates):
+
+```bash
+echo '/var/log/msmtp.log rwk,' | sudo tee -a /etc/apparmor.d/local/usr.bin.msmtp
+sudo apparmor_parser -r /etc/apparmor.d/usr.bin.msmtp
+```
+
+Nota: `rw` sin la `k` no basta — `msmtp` hace `flock()` sobre el logfile
+antes de escribir, y AppArmor trata el permiso de lock (`k`) por separado
+del de lectura/escritura.
+
+Verifica el envío real (como root, que es quien ejecuta `unattended-upgrades`):
+
+```bash
+sudo msmtp -a gmail <tu-email> <<< "Test unattended-upgrades"
+echo "exit=$?"   # debe dar 0, sin ningún mensaje de msmtp
+```
+
+## 11. Crontab
 
 ```bash
 crontab -e
@@ -156,10 +259,11 @@ Pega exactamente esto (ajusta rutas solo si no clonaste en `/home/home/home`):
 */5 * * * * /home/home/home/backups/network-metrics.sh
 * * * * * /home/home/home/backups/container-health-metrics.sh
 0 8 * * * /usr/bin/python3 /home/home/home/backups/daily-report.py >> /home/home/home/backups/daily-report.log 2>&1
+0 4 * * 0 /home/home/home/backups/docker-prune.sh
 @reboot sleep 20 && BACKUP_TRIGGER_TOKEN=$(grep '^BACKUP_TRIGGER_TOKEN=' /home/home/home/.env | cut -d= -f2-) nohup python3 /home/home/home/backups/webhook-server.py >> /home/home/home/backups/webhook-server.log 2>&1 &
 ```
 
-## 11. Verificación final
+## 12. Verificación final
 
 - `docker compose ps` — todo arriba y "healthy".
 - Grafana accesible en tu dominio, dashboards cargados (`grafana/provisioning/dashboards/`).
@@ -167,3 +271,5 @@ Pega exactamente esto (ajusta rutas solo si no clonaste en `/home/home/home`):
 - Escribe al bot en el grupo de Telegram y confirma que responde.
 - Lanza un backup de prueba: `backups/backup.sh` a mano y revisa `backups/backup.log`.
 - Confirma que llega el informe diario o espera al cron de las 08:00.
+- `sudo msmtp -a gmail <tu-email> <<< "test"` sin errores — confirma que
+  `unattended-upgrades` podrá avisar por correo si algo falla.
