@@ -1,0 +1,17 @@
+[Unit]
+Description=Sebastian - agente de Telegram para el homelab
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=home
+WorkingDirectory=/home/home/home/telegram-agent
+ExecStart=/home/home/home/telegram-agent/.venv/bin/python3 -u agent.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/home/home/telegram-agent/agent.log
+StandardError=append:/home/home/home/telegram-agent/agent.log
+
+[Install]
+WantedBy=multi-user.target

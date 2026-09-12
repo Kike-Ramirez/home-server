@@ -18,6 +18,7 @@
 - [Arquitectura](#arquitectura)
 - [Monitorización y alertado](#monitorización-y-alertado)
 - [Backups y restore](#backups-y-restore-backups)
+- [Sebastián: agente conversacional](#sebastián-agente-conversacional-telegram-agent)
 - [Estructura del repositorio](#estructura-del-repositorio)
 - [Puesta en marcha](#puesta-en-marcha)
 - [Seguridad y secretos](#seguridad-y-secretos)
@@ -79,6 +80,15 @@ flowchart LR
     NPM --> HA & PI & VW & GF
 
     RESTIC[(restic repo<br/>USB externo)] <-. backup / restore .-> Apps
+
+    SEB[Sebastián<br/>Claude Agent SDK] -->|consulta / gestiona| HA
+    SEB -->|consulta| PR
+    SEB -. lee/edita .-> Apps
+    TG[/Telegram: grupo Home/]
+    SEB <--> TG
+    AL -->|telegram| TG
+    DR[backups/daily-report.py] -->|telegram| TG
+    PR --> DR
 ```
 
 ## Monitorización y alertado
@@ -118,6 +128,30 @@ externo montado en `/media/home/home-backups`, con la contraseña en
 > pide confirmación explícita y siempre deja un snapshot `pre-restore` antes
 > de aplicar nada.
 
+## Sebastián: agente conversacional (`telegram-agent/`)
+
+Demonio Python (Claude Agent SDK) que corre en el host como servicio de
+systemd (`sebastian-bot.service`) y habla por Telegram en un grupo
+compartido por los miembros de la casa. Deja preguntar cualquier cosa sobre
+el homelab/Home Assistant y actuar sobre él con herramientas reales:
+
+| Pieza | Qué hace |
+|---|---|
+| `agent.py` | El demonio: sesión única de conversación (una por grupo, no por persona — distingue quién escribe por el nombre de remitente de Telegram), botones ✅/❌ de confirmación para acciones con efectos reales, indicador "escribiendo...", conversión Markdown→HTML de seguridad. |
+| `tools.py` | Tools MCP propias: `ha_get_states`/`ha_list_services`/`ha_call_service` (Home Assistant), `prometheus_query`, `docker_restart` (lista blanca de servicios), `git_commit`. Además de las nativas Read/Grep/Glob/Edit/WebSearch/Bash. |
+| `memory.md` | Libreta de memoria a largo plazo, compartida entre todos, editable por el propio Sebastián sin pedir confirmación (bajo riesgo). Respaldada cada noche junto al resto de datos de apps. |
+| `session_id.txt` | Id de la sesión del Agent SDK, para retomar la conversación si el demonio se reinicia. No se respalda (bajo valor). |
+| `sebastian-bot.service` | Unit de systemd (`Restart=on-failure`) — instalado en `/etc/systemd/system/`, arranca solo en cada reinicio. |
+
+**Permisos**: las tools de solo lectura y las ediciones a `memory.md` se
+ejecutan directas; el resto (llamar a un servicio de HA, reiniciar un
+contenedor, commitear, editar cualquier otro fichero, Bash que no sea
+claramente de solo lectura) se propone por Telegram y espera confirmación.
+
+**Autenticación**: reutiliza la sesión ya iniciada del CLI `claude` en la
+máquina — no necesita `ANTHROPIC_API_KEY` propia ni depende de que haya una
+sesión de Claude Code abierta en ningún sitio.
+
 ## Estructura del repositorio
 
 ```text
@@ -128,6 +162,8 @@ grafana/provisioning/      # Datasources, dashboards y alerting de Grafana
 prometheus/prometheus.yml  # Configuración de scraping
 blackbox/config.yml        # Módulos de sondeo de blackbox-exporter
 homeassistant/config/      # Configuración de Home Assistant (parcial, ver abajo)
+telegram-agent/            # Sebastián: agente conversacional vía Telegram
+docs/                      # Guías paso a paso (setup desde cero, restore en máquina nueva)
 pihole/, vaultwarden/, nginx-proxy-manager/, tailscale/
                             # Bind mounts de datos runtime de cada servicio
                             # (bases de datos, certificados, estado -> ignorados)
@@ -135,22 +171,14 @@ pihole/, vaultwarden/, nginx-proxy-manager/, tailscale/
 
 ## Puesta en marcha
 
-1. Clona el repo en el host que va a correr los servicios.
-2. Copia `.env.example` a `.env` y rellena los valores reales:
-   ```bash
-   cp .env.example .env
-   ```
-3. Levanta los servicios:
-   ```bash
-   docker compose up -d
-   ```
-4. Restaura desde backup lo que se excluyó del repo (bases de datos,
-   certificados, estado de Tailscale, `.storage`/`.cloud` de Home
-   Assistant) si vienes de una instalación existente — usa `backups/restore.sh`
-   o vuelve a configurar cada servicio desde cero si es una instalación nueva.
-5. Configura los crons de `backups/` (`backup.sh`, `backup-monthly.sh`,
-   `container-health-metrics.sh`, `network-metrics.sh`, `daily-report.py`)
-   según los horarios indicados en la cabecera de cada script.
+- **Instalación nueva, sin backup previo**: sigue
+  [`docs/SETUP-DESDE-CERO.md`](docs/SETUP-DESDE-CERO.md) — paso a paso desde
+  clonar el repo hasta tener Sebastián respondiendo en Telegram.
+- **Recuperar un sistema existente en hardware nuevo (disco roto,
+  migración)**: sigue
+  [`docs/RESTAURAR-DESDE-BACKUP.md`](docs/RESTAURAR-DESDE-BACKUP.md) —
+  restaura desde el último backup mensual en el USB en vez de configurar
+  todo desde cero.
 
 ## Seguridad y secretos
 
@@ -158,13 +186,16 @@ Nada de lo siguiente se versiona (ver `.gitignore`):
 
 - `.env` y cualquier `*.env` (SMTP, tokens, contraseñas de Pi-hole/Vaultwarden/Tailscale).
 - `backups/restic-password.txt` (clave de cifrado del repositorio de backups).
-- `prometheus/ha-token.txt` (token de larga duración de Home Assistant que usa
-  Prometheus para leer `/api/prometheus`).
+- `prometheus/ha-token.txt` (token de larga duración de Home Assistant, usado
+  por Prometheus para leer `/api/prometheus` y por las tools de Sebastián
+  para hablar con la API de HA).
 - Datos runtime con contenido sensible: `vaultwarden/data/`, `pihole/etc-pihole/`,
   `nginx-proxy-manager/{data,letsencrypt}/`, `tailscale/state/`, y las bases de
   datos/estado/`secrets.yaml` de `homeassistant/config/`.
 - Logs, locks y métricas generadas en runtime (`backups/*.log`, `backups/*.lock`,
-  `backups/metrics/`).
+  `backups/metrics/`, `telegram-agent/*.log`).
+- Estado runtime de Sebastián: `telegram-agent/.venv/`, `telegram-agent/memory.md`
+  (no es secreto, pero es estado dinámico, no config), `telegram-agent/session_id.txt`.
 
 Solo se versiona la configuración "de código" (compose, provisioning de
 Grafana/Prometheus, scripts) — nunca credenciales ni bases de datos.

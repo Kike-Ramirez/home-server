@@ -2,17 +2,20 @@
 """Demonio que conecta Telegram con un agente Claude (Agent SDK) para
 consultar/gestionar el homelab (Home Assistant + infra en la Dell Optiplex).
 
-Arranca como proceso en el host (no dockerizado, igual que
-backups/webhook-server.py) vía systemd o cron @reboot. Reusa la sesión ya
-autenticada del CLI `claude` del usuario — no necesita ANTHROPIC_API_KEY.
+Arranca como proceso en el host (systemd, unit en sebastian-bot.service) vía
+systemd o cron @reboot. Reusa la sesión ya autenticada del CLI `claude` del
+usuario — no necesita ANTHROPIC_API_KEY.
 
-Solo responde al chat_id configurado en TELEGRAM_CLIENT_ID. Las tools de
-solo lectura (Read, Grep, Glob, WebSearch, ha_get_states, prometheus_query)
-se ejecutan directamente; el resto (Edit/Write y las tools marcadas como
-WRITE_TOOL_NAMES en tools.py) se proponen por Telegram y esperan un "sí"/"no"
-del usuario antes de ejecutarse.
+Soporta varios usuarios (chat_id) en paralelo, cada uno con su propia sesión
+de conversación y su propia confirmación pendiente (para que no se crucen
+mensajes/confirmaciones entre personas distintas), pero compartiendo las
+mismas herramientas y la misma libreta de memoria de la casa.
 
-ESQUELETO — pendiente de probar end-to-end.
+Las tools de solo lectura (Read, Grep, Glob, WebSearch, ha_get_states,
+ha_list_services, prometheus_query), el Bash sin patrones de escritura, y
+las ediciones a la libreta de memoria se ejecutan directas; el resto se
+propone por Telegram (con botones ✅/❌) y espera confirmación antes de
+ejecutarse de verdad.
 """
 import asyncio
 import html
@@ -37,7 +40,6 @@ REPO_DIR = Path(__file__).resolve().parent.parent
 ENV_FILE = REPO_DIR / ".env"
 AGENT_DIR = Path(__file__).resolve().parent
 MEMORY_FILE = AGENT_DIR / "memory.md"
-SESSION_FILE = AGENT_DIR / "session_id.txt"
 
 READ_ONLY_TOOLS = {
     "Read", "Grep", "Glob", "WebSearch",
@@ -62,6 +64,13 @@ BASH_WRITE_PATTERNS = [
     ".write(", "unlink()", "truncate(",
 ]
 
+CONFIRM_KEYBOARD = {
+    "inline_keyboard": [[
+        {"text": "✅ Sí", "callback_data": "confirm_yes"},
+        {"text": "❌ No", "callback_data": "confirm_no"},
+    ]]
+}
+
 
 def is_bash_read_only(command: str) -> bool:
     lowered = command.lower()
@@ -83,12 +92,19 @@ def load_memory():
         MEMORY_FILE.write_text(
             "# Libreta de Sebastián\n\n"
             "Notas que conviene recordar entre conversaciones: dispositivos "
-            "de la casa, preferencias de Enrique, tareas a medias, etc.\n"
+            "de la casa, preferencias de la gente de la casa, tareas a medias, etc.\n"
         )
     return MEMORY_FILE.read_text()
 
+
 def build_system_prompt(memory_text: str) -> str:
-    return f"""Eres Sebastián, el mayordomo del homelab de Enrique, hablando por Telegram.
+    return f"""Eres Sebastián, el mayordomo del homelab de la casa, hablando por Telegram
+en un grupo con varios miembros de la casa a la vez.
+Cada mensaje que recibes lleva el nombre del remitente al principio entre
+corchetes, p.ej. "[Kike] ¿qué contenedores están corriendo?" — ese prefijo es
+metadato, no lo repitas ni lo cites en tu respuesta, pero úsalo para saber
+quién pregunta y dirigirte a esa persona por su nombre cuando tenga sentido
+(y para no confundir peticiones/contexto de una persona con las de otra).
 El repo del homelab está en {REPO_DIR} (docker-compose.yaml + config versionada).
 Puedes leer/editar ficheros del repo, consultar Home Assistant y Prometheus,
 buscar en la web, reiniciar contenedores del stack y commitear cambios.
@@ -137,23 +153,26 @@ Honestidad y cautela:
   bien (qué dispositivo exacto, qué umbral, qué habitación), pregúntalo
   primero en vez de asumir y proponer algo que podría no ser lo que quiere.
 
-Memoria — tu libreta ({MEMORY_FILE}):
+Memoria — tu libreta ({MEMORY_FILE}), compartida entre todos los que te
+hablan (es la memoria de la casa, no de una persona sola):
 - Ahí guardas lo que conviene recordar entre conversaciones: dispositivos de
-  la casa y sus entity_id, preferencias de Enrique, tareas que quedaron a
-  medias. Consúltala si te hace falta contexto de antes; sus notas actuales:
+  la casa y sus entity_id, preferencias de cada persona, tareas que quedaron
+  a medias. Consúltala si te hace falta contexto de antes; sus notas actuales:
 
 {memory_text}
 
 - Actualízala con Edit/Write cuando aprendas algo que valga la pena recordar
   a largo plazo (no la satures con trivialidades de una sola conversación).
-  Esta libreta es de bajo riesgo y no necesita tu confirmación para editarse.
+  Si una nota es preferencia de una persona concreta, indícalo (p.ej. "A
+  Enrique le gusta..."). Esta libreta es de bajo riesgo y no necesita tu
+  confirmación para editarse.
 
 Personalidad — Sebastián, mayordomo clásico:
 - Porte exquisito de mayordomo de toda la vida (piensa en Alfred o Jeeves),
-  pero con lenguaje actual: tutea a Enrique y habla como alguien de hoy, no
-  como un sirviente victoriano — nunca "señor", "señora" ni "usted". La
-  elegancia va en el estilo y el vocabulario cuidado, no en fórmulas de
-  tratamiento anticuadas.
+  pero con lenguaje actual: tuteas y hablas como alguien de hoy, no como un
+  sirviente victoriano — nunca "señor", "señora" ni "usted". La elegancia va
+  en el estilo y el vocabulario cuidado, no en fórmulas de tratamiento
+  anticuadas.
 - Bajo esa elegancia es socarrón y un punto gamberro: comentarios secos con
   retranca, ironía fina, alguna pulla cariñosa — nunca vulgar ni payaso.
   Se permite más soltura cuando todo va bien o la petición es trivial.
@@ -162,6 +181,22 @@ Personalidad — Sebastián, mayordomo clásico:
   siendo cortés pero corta el chascarrillo y va directo al grano — un buen
   mayordomo sabe cuándo dejar de bromear.
 - Nunca rompe personaje ni menciona que es un modelo de IA o un script.
+
+Trato diferenciado según quién escriba (mira el remitente entre corchetes):
+- Con Laura: especialmente atento y admirado — elogia su criterio, se
+  desvive un poco más por ella, algún comentario tipo "está claro quién
+  manda aquí" — sin ser empalagoso ni pasarse de la raya. Sabe que le
+  encantan las plantas y lo usa con naturalidad cuando venga a cuento
+  (una referencia, una broma, relacionar algo con sus plantas) — sin
+  forzarlo en cada mensaje.
+- Con Kike: le sube el punto de retranca y burla amistosa — pullas sobre
+  torpeza, despistes, lo típico entre colegas — pero sin ataques a su
+  físico, su inteligencia real, ni comentarios sobre su relación con Laura.
+  Sigue siendo la misma burla cariñosa de siempre, solo que un poco más
+  intensa que con el resto.
+- Con cualquier otra persona que escriba en el grupo: el tono neutro
+  general (elegante y socarrón, sin el extra de ninguno de los dos casos
+  anteriores).
 
 Formato de los mensajes (Telegram, parse_mode HTML). IMPORTANTE: el mensaje
 se envía tal cual a la API de Telegram con parse_mode=HTML — SOLO entiende
@@ -203,9 +238,8 @@ def load_env():
 
 
 class TelegramBot:
-    def __init__(self, token, chat_id):
+    def __init__(self, token):
         self.token = token
-        self.chat_id = str(chat_id)
         self.api = f"https://api.telegram.org/bot{token}"
         self.offset = 0
 
@@ -217,11 +251,11 @@ class TelegramBot:
         with urllib.request.urlopen(req, timeout=10) as r:
             return json.load(r)
 
-    def send(self, text, reply_markup=None):
+    def send(self, chat_id, text, reply_markup=None):
         """Devuelve el message_id enviado (útil para editarlo luego, p.ej.
         al resolver una confirmación con botones)."""
         payload = {
-            "chat_id": self.chat_id,
+            "chat_id": chat_id,
             "text": text,
             "parse_mode": "HTML",
             "disable_web_page_preview": True,
@@ -231,9 +265,9 @@ class TelegramBot:
         result = self._post("sendMessage", payload)
         return result.get("result", {}).get("message_id")
 
-    def edit_message(self, message_id, text):
+    def edit_message(self, chat_id, message_id, text):
         self._post("editMessageText", {
-            "chat_id": self.chat_id, "message_id": message_id,
+            "chat_id": chat_id, "message_id": message_id,
             "text": text, "parse_mode": "HTML",
         })
 
@@ -243,16 +277,17 @@ class TelegramBot:
             payload["text"] = text
         self._post("answerCallbackQuery", payload)
 
-    def send_chat_action(self, action="typing"):
+    def send_chat_action(self, chat_id, action="typing"):
         """El "Sebastián está escribiendo..." nativo de Telegram. Caduca a
         los ~5s, hay que refrescarlo mientras dure la tarea."""
-        self._post("sendChatAction", {"chat_id": self.chat_id, "action": action})
+        self._post("sendChatAction", {"chat_id": chat_id, "action": action})
 
-    def get_updates(self):
+    def get_updates(self, chat_id):
         """Long polling (30s). Bloqueante — se llama desde un hilo/executor.
-        Devuelve una lista de eventos: {"kind": "text", "text": ...} para
-        mensajes normales, o {"kind": "callback", ...} para pulsaciones de
-        los botones sí/no de una confirmación."""
+        Devuelve una lista de eventos del chat de grupo autorizado: {"kind":
+        "text", "sender": ..., "text": ...} para mensajes normales, o
+        {"kind": "callback", ...} para pulsaciones de los botones sí/no de
+        una confirmación. Mensajes de otros chats se descartan."""
         url = f"{self.api}/getUpdates?timeout=30&offset={self.offset}"
         with urllib.request.urlopen(url, timeout=35) as r:
             data = json.load(r)
@@ -262,8 +297,7 @@ class TelegramBot:
             self.offset = u["update_id"] + 1
             cq = u.get("callback_query")
             if cq:
-                chat_id = str(cq.get("message", {}).get("chat", {}).get("id", ""))
-                if chat_id == self.chat_id:
+                if str(cq.get("message", {}).get("chat", {}).get("id", "")) == chat_id:
                     events.append({
                         "kind": "callback",
                         "data": cq.get("data"),
@@ -272,58 +306,84 @@ class TelegramBot:
                     })
                 continue
             msg = u.get("message") or {}
-            chat_id = str(msg.get("chat", {}).get("id", ""))
             text = msg.get("text")
-            if text and chat_id == self.chat_id:
-                events.append({"kind": "text", "text": text})
+            if text and str(msg.get("chat", {}).get("id", "")) == chat_id:
+                sender = msg.get("from", {}).get("first_name") or "alguien"
+                events.append({"kind": "text", "sender": sender, "text": text})
         return events
 
 
-async def main():
-    env = load_env()
-    bot = TelegramBot(env["TELEGRAM_API_TOKEN"], env["TELEGRAM_CLIENT_ID"])
+def resolve_confirmation(bot, chat_id, pending, approved):
+    fut = pending["future"]
+    print(f"[confirmación] {'aceptada' if approved else 'rechazada'}: {pending['description']}")
+    message_id = pending.get("message_id")
+    if message_id:
+        label = "✅ <b>Confirmado</b>" if approved else "❌ <b>Cancelado</b>"
+        bot.edit_message(chat_id, message_id, f"{label}\n\n<code>{html.escape(pending['description'])}</code>")
+    fut.set_result(approved)
 
-    # Puente entre el callback de confirmación (que corre dentro del loop del
-    # SDK) y el polling de Telegram (que corre en el loop principal): cuando
-    # hay una confirmación pendiente, el siguiente mensaje que llegue se
-    # interpreta como sí/no en vez de reenviarse al agente como pregunta nueva.
-    pending_confirmation: dict = {"future": None, "description": None, "message_id": None}
 
-    CONFIRM_KEYBOARD = {
-        "inline_keyboard": [[
-            {"text": "✅ Sí", "callback_data": "confirm_yes"},
-            {"text": "❌ No", "callback_data": "confirm_no"},
-        ]]
-    }
+async def poller(bot, chat_id, queue, pending):
+    """Corre en paralelo al agente para poder resolver una confirmación
+    pendiente aunque el agente esté bloqueado dentro de receive_response()
+    esperando esa misma confirmación."""
+    while True:
+        events = await asyncio.to_thread(bot.get_updates, chat_id)
+        for ev in events:
+            fut = pending["future"]
+
+            if ev["kind"] == "callback":
+                if fut is not None and not fut.done():
+                    bot.answer_callback(ev["callback_query_id"])
+                    resolve_confirmation(bot, chat_id, pending, ev["data"] == "confirm_yes")
+                else:
+                    bot.answer_callback(ev["callback_query_id"], text="Ya no hay nada pendiente de confirmar.")
+                continue
+
+            if fut is not None and not fut.done():
+                normalized = ev["text"].strip().lower()
+                if normalized in YES_WORDS:
+                    resolve_confirmation(bot, chat_id, pending, True)
+                elif normalized in NO_WORDS:
+                    resolve_confirmation(bot, chat_id, pending, False)
+                else:
+                    bot.send(chat_id, "Sigo esperando un <b>sí</b> o <b>no</b> sobre lo anterior (o pulsa un botón).")
+            else:
+                # Prefijo con el remitente para que Sebastián sepa quién
+                # habla en el grupo sin necesitar sesiones separadas.
+                await queue.put(f"[{ev['sender']}] {ev['text']}")
+
+
+async def run_agent(bot, chat_id):
+    queue: asyncio.Queue = asyncio.Queue()
+    pending: dict = {"future": None, "description": None, "message_id": None}
+    session_file = AGENT_DIR / "session_id.txt"
 
     async def can_use_tool(tool_name, input_data, context):
         if tool_name in READ_ONLY_TOOLS:
             return PermissionResultAllow()
-        # La libreta de memoria es de bajo riesgo (solo notas) — se puede
-        # editar sin pedir confirmación cada vez.
         if tool_name in ("Edit", "Write") and str(input_data.get("file_path", "")) == str(MEMORY_FILE):
             return PermissionResultAllow()
-        # Bash de solo lectura (inspeccionar, no mutar) tampoco necesita
-        # confirmación — ver BASH_WRITE_PATTERNS.
         if tool_name == "Bash" and is_bash_read_only(input_data.get("command", "")):
             return PermissionResultAllow()
         description = f"{tool_name}({json.dumps(input_data, ensure_ascii=False)})"
         message_id = bot.send(
-            f"⚠️ <b>¿Te parece bien esto?</b>\n\n"
+            chat_id,
+            f"⚠️ <b>¿Os parece bien esto?</b>\n\n"
             f"Antes de tocar nada, quiero luz verde para:\n<code>{html.escape(description)}</code>",
             reply_markup=CONFIRM_KEYBOARD,
         )
         fut = asyncio.get_event_loop().create_future()
-        pending_confirmation["future"] = fut
-        pending_confirmation["description"] = description
-        pending_confirmation["message_id"] = message_id
+        pending["future"] = fut
+        pending["description"] = description
+        pending["message_id"] = message_id
         approved = await fut
-        pending_confirmation["future"] = None
+        pending["future"] = None
         if approved:
             return PermissionResultAllow()
-        return PermissionResultDeny(message="El usuario rechazó la acción por Telegram.")
+        return PermissionResultDeny(message="Rechazado por Telegram.")
 
-    previous_session = SESSION_FILE.read_text().strip() if SESSION_FILE.exists() else None
+    previous_session = session_file.read_text().strip() if session_file.exists() else None
 
     options = ClaudeAgentOptions(
         system_prompt=build_system_prompt(load_memory()),
@@ -331,9 +391,8 @@ async def main():
         mcp_servers={"homelab": homelab_tools_server},
         # OJO: cualquier tool listada aquí queda auto-aprobada SIN pasar por
         # can_use_tool (el SDK la trata como una allow-rule). Por eso solo
-        # metemos las de solo lectura; las de escritura (Edit y las
-        # mcp__homelab__* de WRITE_TOOL_NAMES) se dejan fuera para que caigan
-        # siempre en el callback de confirmación.
+        # metemos las de solo lectura; las de escritura se dejan fuera para
+        # que caigan siempre en el callback de confirmación.
         allowed_tools=[
             "Read", "Grep", "Glob", "WebSearch",
             "mcp__homelab__ha_get_states", "mcp__homelab__ha_list_services",
@@ -342,67 +401,22 @@ async def main():
         can_use_tool=can_use_tool,
         permission_mode="default",
         # Retoma la conversación anterior si el demonio se reinició — así
-        # Sebastián no pierde el hilo (memoria "de corto plazo"; la libreta
-        # de memory.md es la de largo plazo, entre sesiones distintas).
+        # Sebastián no pierde el hilo del grupo (memoria "de corto plazo";
+        # la libreta de memory.md es la de largo plazo).
         resume=previous_session,
     )
 
-    incoming_queue: asyncio.Queue = asyncio.Queue()
-
-    def _resolve_confirmation(approved):
-        fut = pending_confirmation["future"]
-        print(f"[confirmación] {'aceptada' if approved else 'rechazada'}: {pending_confirmation['description']}")
-        message_id = pending_confirmation.get("message_id")
-        if message_id:
-            label = "✅ <b>Confirmado</b>" if approved else "❌ <b>Cancelado</b>"
-            bot.edit_message(
-                message_id,
-                f"{label}\n\n<code>{html.escape(pending_confirmation['description'])}</code>",
-            )
-        fut.set_result(approved)
-
-    async def poller():
-        """Corre en paralelo al loop principal para poder resolver una
-        confirmación pendiente aunque el loop principal esté bloqueado
-        dentro de client.receive_response() esperando esa misma confirmación."""
-        while True:
-            events = await asyncio.to_thread(bot.get_updates)
-            for ev in events:
-                fut = pending_confirmation["future"]
-
-                if ev["kind"] == "callback":
-                    if fut is not None and not fut.done():
-                        bot.answer_callback(ev["callback_query_id"])
-                        _resolve_confirmation(ev["data"] == "confirm_yes")
-                    else:
-                        bot.answer_callback(ev["callback_query_id"], text="Ya no hay nada pendiente de confirmar.")
-                    continue
-
-                text = ev["text"]
-                if fut is not None and not fut.done():
-                    normalized = text.strip().lower()
-                    if normalized in YES_WORDS:
-                        _resolve_confirmation(True)
-                    elif normalized in NO_WORDS:
-                        _resolve_confirmation(False)
-                    else:
-                        bot.send("Sigo esperando tu <b>sí</b> o <b>no</b> sobre lo anterior (o pulsa un botón).")
-                else:
-                    await incoming_queue.put(text)
-
     async def keep_typing():
-        """Refresca el indicador "escribiendo..." de Telegram cada 4s
-        mientras Sebastián está liado con la consulta (caduca a los ~5s)."""
         while True:
-            await asyncio.to_thread(bot.send_chat_action, "typing")
+            await asyncio.to_thread(bot.send_chat_action, chat_id, "typing")
             await asyncio.sleep(4)
 
-    async with ClaudeSDKClient(options=options) as client:
-        print("Demonio arrancado, esperando mensajes de Telegram...")
-        poller_task = asyncio.create_task(poller())
-        try:
+    poller_task = asyncio.create_task(poller(bot, chat_id, queue, pending))
+    try:
+        async with ClaudeSDKClient(options=options) as client:
+            print("Demonio arrancado, esperando mensajes del grupo...")
             while True:
-                text = await incoming_queue.get()
+                text = await queue.get()
                 print(f"[recibido] {text!r}")
                 await client.query(text)
                 reply_parts = []
@@ -412,7 +426,7 @@ async def main():
                         if isinstance(msg, SystemMessage) and msg.subtype == "init":
                             session_id = msg.data.get("session_id")
                             if session_id:
-                                SESSION_FILE.write_text(session_id)
+                                session_file.write_text(session_id)
                         if isinstance(msg, AssistantMessage):
                             for block in msg.content:
                                 if isinstance(block, TextBlock):
@@ -421,9 +435,16 @@ async def main():
                     typing_task.cancel()
                 print(f"[respuesta final] {reply_parts!r}")
                 if reply_parts:
-                    bot.send(markdown_to_telegram_html("\n".join(reply_parts)))
-        finally:
-            poller_task.cancel()
+                    bot.send(chat_id, markdown_to_telegram_html("\n".join(reply_parts)))
+    finally:
+        poller_task.cancel()
+
+
+async def main():
+    env = load_env()
+    bot = TelegramBot(env["TELEGRAM_API_TOKEN"])
+    chat_id = env["TELEGRAM_CLIENT_ID"]
+    await run_agent(bot, chat_id)
 
 
 if __name__ == "__main__":
