@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose ps*)",
+      "Bash(docker compose logs*)",
+      "Bash(docker compose config*)",
+      "Bash(docker ps*)",
+      "Bash(docker logs*)",
+      "Bash(docker inspect*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(crontab -l)",
+      "Bash(systemctl status *)",
+      "Bash(curl * localhost*)",
+      "Bash(curl * 127.0.0.1*)",
+      "Read(//home/home/home/docker-compose.yaml)",
+      "Read(//home/home/home/README.md)",
+      "Read(//home/home/home/CLAUDE.md)",
+      "Read(//home/home/home/prometheus/prometheus.yml)",
+      "Read(//home/home/home/blackbox/config.yml)",
+      "Read(//home/home/home/grafana/provisioning/**)",
+      "Read(//home/home/home/homeassistant/config/configuration.yaml)",
+      "Read(//home/home/home/homeassistant/config/automations.yaml)",
+      "Read(//home/home/home/homeassistant/config/scenes.yaml)",
+      "Read(//home/home/home/homeassistant/config/scripts.yaml)",
+      "Read(//home/home/home/.env.example)"
+    ],
+    "deny": [
+      "Bash(*restic* forget*)",
+      "Bash(*restic* prune*)",
+      "Bash(rm -rf*)",
+      "Bash(docker compose down -v*)",
+      "Bash(docker volume rm*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(*backups/restore.sh*)",
+      "Bash(git reset --hard*)"
+    ]
+  }
+}
