@@ -16,6 +16,12 @@ backups/backup.lock
 backups/webhook-server.log
 backups/metrics/
 
+# Demonio de Telegram: venv, logs y estado runtime (memoria/sesión de Sebastián)
+telegram-agent/.venv/
+telegram-agent/*.log
+telegram-agent/memory.md
+telegram-agent/session_id.txt
+
 # Vaultwarden (password manager DB, RSA keys, attachments)
 vaultwarden/data/
 

@@ -21,6 +21,7 @@ docker run --rm \
   -v "$BASE_DIR/nginx-proxy-manager/letsencrypt:/data/npm-letsencrypt:ro" \
   -v "$BASE_DIR/homeassistant/config:/data/homeassistant:ro" \
   -v "$BASE_DIR/grafana/provisioning:/data/grafana-provisioning:ro" \
+  -v "$BASE_DIR/telegram-agent/memory.md:/data/telegram-agent-memory.md:ro" \
   -v "$REPO_DIR:/repo" \
   -v "$PASSWORD_FILE:/repo-password:ro" \
   -e RESTIC_REPOSITORY=/repo \
