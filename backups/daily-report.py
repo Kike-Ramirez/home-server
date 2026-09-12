@@ -300,19 +300,17 @@ SEVERITY_COLOR = {"critical": "#FF453A", "warning": "#FF9F0A"}
 SEVERITY_LABEL = {"critical": "Critico", "warning": "Aviso"}
 
 
+def status_summary(problems):
+    if not problems:
+        return "#30D158", "Todo en orden"
+    if any(p[0] == "critical" for p in problems):
+        return "#FF453A", f"{len(problems)} problema(s) detectado(s)"
+    return "#FF9F0A", f"{len(problems)} aviso(s) detectado(s)"
+
+
 def build_email(problems, metrics):
     today = time.strftime("%d/%m/%Y")
-    ok = not problems
-
-    if ok:
-        status_color = "#30D158"
-        status_text = "Todo en orden"
-    elif any(p[0] == "critical" for p in problems):
-        status_color = "#FF453A"
-        status_text = f"{len(problems)} problema(s) detectado(s)"
-    else:
-        status_color = "#FF9F0A"
-        status_text = f"{len(problems)} aviso(s) detectado(s)"
+    status_color, status_text = status_summary(problems)
 
     font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif"
 
@@ -388,12 +386,60 @@ def send_email(env, subject, html):
         server.sendmail(env["SMTP_USERNAME"], [TO_ADDRESS], msg.as_string())
 
 
+def build_telegram_text(problems, metrics):
+    today = time.strftime("%d/%m/%Y")
+    _, status_text = status_summary(problems)
+
+    lines = [f"<b>Homelab - {today}</b>", status_text]
+
+    if problems:
+        lines.append("")
+        for severity, title, detail, hint in problems:
+            label = SEVERITY_LABEL[severity]
+            lines.append(f"• <b>[{label}] {title}</b>")
+            lines.append(f"  {detail}")
+            lines.append(f"  <i>Pista: {hint}</i>")
+    else:
+        lines.append("")
+        for label, value in metrics[:8]:
+            lines.append(f"• {label}: {value}")
+
+    lines.append("")
+    lines.append(f'<a href="{GRAFANA_URL}">Ver dashboards en Grafana</a>')
+    return "\n".join(lines)
+
+
+def send_telegram(env, text):
+    token = env.get("TELEGRAM_API_TOKEN")
+    chat_id = env.get("TELEGRAM_CLIENT_ID")
+    if not token or not chat_id:
+        return
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = json.dumps({
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=payload, headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=10) as r:
+        r.read()
+
+
 def main():
     env = load_env()
     problems = check_problems()
     metrics = key_metrics()
+
     subject, html = build_email(problems, metrics)
     send_email(env, subject, html)
+
+    try:
+        send_telegram(env, build_telegram_text(problems, metrics))
+    except Exception as exc:
+        print(f"AVISO: no se pudo enviar el informe por Telegram: {exc}")
 
 
 if __name__ == "__main__":

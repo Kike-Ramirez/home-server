@@ -151,6 +151,8 @@ services:
       - GF_SMTP_PASSWORD=${SMTP_PASSWORD}
       - GF_SMTP_FROM_ADDRESS=${SMTP_USERNAME}
       - GF_SMTP_FROM_NAME=Grafana (Optiplex)
+      - TELEGRAM_API_TOKEN=${TELEGRAM_API_TOKEN}
+      - TELEGRAM_CLIENT_ID=${TELEGRAM_CLIENT_ID}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro

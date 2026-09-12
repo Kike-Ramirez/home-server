@@ -42,6 +42,7 @@ Infraestructura de un homelab casero (Dell Optiplex, dominio `kikeramirez.org`) 
 - **Alerting** (`grafana/provisioning/alerting/rules.yaml`): disco lleno, cualquier target caído, contenedores en crash-loop o parados (`container_docker_running`, custom), backup atrasado/USB sin espacio, Pi-hole/Vaultwarden/NPM/Home Assistant inalcanzables. Notifica por email.
 - **`backups/daily-report.py`** (cron 08:00): correo diario con el estado general — reimplementa a mano umbrales similares a `rules.yaml` (deuda técnica conocida, no una fuente de verdad separada que debas sincronizar sin que se pida).
 - **Filtro `$container`** en los dashboards Contenedores/Homelab Overview: hace match contra la label de docker-compose (`container_label_com_docker_compose_project_config_files`), no contra un prefijo de nombre. Su regex ancla `name=` a un boundary de label (`[{,]\s*name="..."`) — si tocas ese regex y lo dejas sin anclar, puede hacer match con labels que no son el nombre real (p. ej. `container_label_io_hass_base_name`).
+- Los dashboards/alertas de Grafana viven en dos sitios: el JSON provisionado (`grafana/provisioning/dashboards/`, lo que versiona este repo) y el volumen runtime `grafana_data` (cambios hechos desde la UI, no versionados). Si editas el JSON, comprueba que no diverge de lo que hay ya cargado en la UI — el backup mensual cubre ambos, pero este repo solo refleja el primero.
 
 ## Reglas de diseño de los dashboards de Grafana
 
@@ -66,6 +67,15 @@ El usuario tiene gustos muy específicos y ya validados para el suite de dashboa
 - **Peticiones abiertas** ("proponme ideas", "¿qué opinas de...", decisiones poco reversibles de arquitectura): compara opciones reales, da una recomendación, y confirma 2-3 decisiones concretas antes de implementar (usa preguntas si hace falta).
 - Prioriza el diagnóstico de causa raíz sobre el parche superficial, y explica el mecanismo del fix, no solo "ya está arreglado".
 - Hay una lista de auditoría pendiente (hallazgos de una revisión completa del repo) que se trabaja de uno en uno; si el usuario dice "sigamos con la auditoría" o similar, retómala desde el estado guardado en memoria en vez de re-auditar todo desde cero.
+
+## Estilo de conversación
+
+- Siempre pregunta todo lo que necesites saber antes de darme una respuesta.
+- Sé conciso, ve al grano. Responde solo a lo que pregunto y solo da la información necesaria y básica para la respuesta. No quiero respuestas largas.
+- Me gusta trabajar con este estilo: partir de un draft (que puede ser inexacto) y mediante muchas consultas rápidas ir iterando hasta llegar a la solución final. 
+- Recuerdame siempre si hay tareas pendientes de terminar antes de emprender otra.
+- Si pido una tarea y observas que se puede hacer mejor, avísame antes de empezar proponiéndome una alternativa mejor.
+- Pregúntame siempre lo necesario para entender el trabajo que estamos haciendo en este repo: misión, objetivos, valores, estilo, reglas, permisos... todo lo que necesites saber.
 
 ## Comandos útiles
 

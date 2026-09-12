@@ -2,10 +2,16 @@ apiVersion: 1
 
 contactPoints:
   - orgId: 1
-    name: email-admin
+    name: admin-alerts
     receivers:
       - uid: email-admin-receiver
         type: email
         settings:
           addresses: enrique.rami.lopez@gmail.com
           singleEmail: true
+      - uid: telegram-admin-receiver
+        type: telegram
+        settings:
+          bottoken: $__env{TELEGRAM_API_TOKEN}
+          chatid: $__env{TELEGRAM_CLIENT_ID}
+          parse_mode: HTML
