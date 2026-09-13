@@ -266,7 +266,61 @@ sudo msmtp -a gmail <tu-email> <<< "Test unattended-upgrades"
 echo "exit=$?"   # debe dar 0, sin ningún mensaje de msmtp
 ```
 
-## 12. Crontab
+## 12. Backup offsite en Google Drive (3-2-1)
+
+Por qué: el USB de backups local es un único punto de fallo físico (robo,
+incendio, fallo del disco a la vez que el servidor). Se manda una copia de
+los snapshots `monthly-full` (los que ya conservas para siempre) a un
+segundo repo restic independiente en Google Drive — solo esos, no los
+`nightly`, para no gastar ancho de banda/almacenamiento de más.
+
+Necesitas `restic` nativo en el host (no el contenedor `restic/restic`, esa
+imagen no trae el backend rclone) y `rclone`:
+
+```bash
+sudo apt install rclone
+# restic nativo: https://github.com/restic/restic/releases, o
+# curl -fsSL https://raw.githubusercontent.com/restic/restic/master/install.sh | sh
+```
+
+Configura el remote (requiere navegador para el OAuth):
+
+```bash
+rclone config   # nueva remote "gdrive", tipo "drive"
+```
+
+**Usa tus propias credenciales OAuth**, no las compartidas por defecto de
+rclone — la cuota compartida de la API de Google Drive se agota enseguida
+con muchos usuarios de rclone en el mundo detrás (`rateLimitExceeded`
+constante, confirmado en producción). En [Google Cloud
+Console](https://console.cloud.google.com/): crea un proyecto → habilita la
+**Google Drive API** → "Credentials" → "Create Credentials" → "OAuth client
+ID" → tipo **Desktop app** → copia `Client ID`/`Client secret` y pégalos en
+`rclone config` (edita el remote `gdrive`, campos `client_id`/`client_secret`,
+luego `rclone config reconnect gdrive:` para re-autorizar con las nuevas
+credenciales).
+
+Inicializa el repo offsite (misma contraseña que el repo local):
+
+```bash
+RESTIC_REPOSITORY=rclone:gdrive:home-backups-offsite \
+RESTIC_PASSWORD_FILE=backups/restic-password.txt \
+restic init
+```
+
+`backups/backup-offsite.sh` hace el `restic copy --tag monthly-full` desde
+el repo local a este. La primera vez sube todo el contenido desde cero
+(puede tardar, y verás reintentos puntuales por `rateLimitExceeded` — es
+normal, el endpoint de creación de ficheros de Drive tiene su propio límite
+aparte de la cuota general del proyecto); ejecútala a mano una vez antes de
+confiar en el cron:
+
+```bash
+backups/backup-offsite.sh
+tail -f backups/backup-offsite.log
+```
+
+## 13. Crontab
 
 ```bash
 crontab -e
@@ -277,6 +331,7 @@ Pega exactamente esto (ajusta rutas solo si no clonaste en `/home/home/home`):
 ```cron
 30 3 * * * /home/home/home/backups/backup.sh
 0 0 1 * * /home/home/home/backups/backup-monthly.sh
+30 1 1 * * /home/home/home/backups/backup-offsite.sh
 */5 * * * * /home/home/home/backups/network-metrics.sh
 * * * * * /home/home/home/backups/container-health-metrics.sh
 0 8 * * * /usr/bin/python3 /home/home/home/backups/daily-report.py >> /home/home/home/backups/daily-report.log 2>&1
@@ -285,7 +340,7 @@ Pega exactamente esto (ajusta rutas solo si no clonaste en `/home/home/home`):
 
 (el webhook de backups ya no va por cron — ver paso 10, corre como servicio systemd.)
 
-## 13. Verificación final
+## 14. Verificación final
 
 - `docker compose ps` — todo arriba y "healthy".
 - Grafana accesible en tu dominio, dashboards cargados (`grafana/provisioning/dashboards/`).
@@ -296,3 +351,4 @@ Pega exactamente esto (ajusta rutas solo si no clonaste en `/home/home/home`):
 - Confirma que llega el informe diario o espera al cron de las 08:00.
 - `sudo msmtp -a gmail <tu-email> <<< "test"` sin errores — confirma que
   `unattended-upgrades` podrá avisar por correo si algo falla.
+- `RESTIC_REPOSITORY=rclone:gdrive:home-backups-offsite RESTIC_PASSWORD_FILE=backups/restic-password.txt restic snapshots` muestra al menos un `monthly-full`.

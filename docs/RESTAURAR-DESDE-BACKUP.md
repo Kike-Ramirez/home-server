@@ -9,12 +9,42 @@ ya lo hace todo (para el stack, restaura, lo levanta), ver `CLAUDE.md`.
 
 ## 0. Qué necesitas SÍ o SÍ antes de empezar
 
-- **El disco USB de backups** físico, con el repo restic dentro.
+- **El disco USB de backups** físico, con el repo restic dentro. Si el USB
+  también se ha perdido/destruido (robo, incendio, lo que sea junto con la
+  máquina), hay una copia offsite en Google Drive con solo los snapshots
+  `monthly-full` — ver el aparte al final de este paso.
 - **`backups/restic-password.txt`** recuperado de donde lo guardaste fuera
   de esta máquina (gestor de contraseñas, papel...). Está en `.gitignore` a
-  propósito — sin él, el repo restic es indescifrable e irrecuperable. Si no
-  lo tienes, no hay restore posible.
+  propósito — sin él, el repo restic es indescifrable e irrecuperable (esto
+  aplica igual al repo offsite: misma contraseña, mismo cifrado). Si no lo
+  tienes, no hay restore posible.
 - Docker Engine + `docker compose` y `git` instalados en la máquina nueva.
+
+**Si restauras desde el repo offsite (sin USB):** `restore.sh` y los pasos de
+abajo asumen el repo en `/media/home/home-backups/home-backups` vía Docker
+(la imagen `restic/restic` no trae el backend rclone), así que en vez de
+tocar esos scripts, "baja" el repo offsite a un repo local nuevo antes de
+seguir con el resto de la guía tal cual:
+
+```bash
+# restic nativo (no el contenedor) + rclone, con un remote "gdrive" que
+# tenga acceso a la misma cuenta de Google Drive (rclone config; no hace
+# falta el mismo Client ID/secret que se usara antes, basta con que
+# autorice la misma cuenta)
+mkdir -p /media/home/home-backups/home-backups
+RESTIC_REPOSITORY=/media/home/home-backups/home-backups \
+RESTIC_PASSWORD_FILE=backups/restic-password.txt \
+restic init
+
+restic copy \
+  --from-repo rclone:gdrive:home-backups-offsite \
+  --from-password-file backups/restic-password.txt \
+  --repo /media/home/home-backups/home-backups \
+  --password-file backups/restic-password.txt
+```
+
+A partir de aquí sigue por el paso 3 exactamente igual (solo tendrás
+snapshots `monthly-full`, que es justo lo que necesitas).
 
 ## 1. Clonar el repo (vacío, sin datos runtime todavía)
 

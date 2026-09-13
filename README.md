@@ -114,6 +114,7 @@ flowchart LR
 |---|---|
 | `backup.sh` | Backup nocturno (cron 03:30): datos de las apps + config. Rotación 7 diaria / 4 semanal / 6 mensual. |
 | `backup-monthly.sh` | Backup mensual completo del sistema (día 1, 00:00), **conservado para siempre** (`monthly-full`). Incluye además `docker-compose.yaml`, `.env`, config. de Prometheus/Blackbox, estado de Tailscale y la BD de Grafana. |
+| `backup-offsite.sh` | Copia offsite (Google Drive vía rclone, día 1 01:30, tras `backup-monthly.sh`) de los snapshots `monthly-full` a un segundo repo restic independiente — cubre pérdida total del USB local (3-2-1). Usa `restic` nativo del host (no el contenedor), porque necesita el backend rclone. |
 | `restore.sh` | Restaura un snapshot completo sobre el sistema en vivo. Antes de tocar nada crea un snapshot de seguridad `pre-restore`, para todo el stack (evita corromper SQLite en caliente), restaura, y vuelve a levantarlo. |
 | `webhook-server.py` | Servidor HTTP mínimo (stdlib only, en el host, gestionado como servicio systemd `webhook-server.service`) que expone `backup-now`, `restore` (confirmación) y `restore-confirm` (ejecución) como botones del dashboard "Backups". Protegido por token compartido, solo accesible desde LAN/Tailscale. |
 | `container-health-metrics.sh` | Estado de `HEALTHCHECK` de cada contenedor → textfile collector (cron cada minuto). |
