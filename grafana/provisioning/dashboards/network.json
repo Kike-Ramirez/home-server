@@ -226,7 +226,7 @@
     {
       "id": 20,
       "type": "row",
-      "title": "Dispositivos en la LAN",
+      "title": "Dispositivos en la LAN (qui\u00e9n pregunta por DNS)",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -239,7 +239,7 @@
     {
       "id": 21,
       "type": "table",
-      "title": "Dispositivos activos (24h)",
+      "title": "Qui\u00e9n ha preguntado por DNS en las \u00faltimas 24h (Pi-hole)",
       "gridPos": {
         "h": 14,
         "w": 24,
@@ -659,7 +659,7 @@
     {
       "id": 26,
       "type": "row",
-      "title": "Dispositivos Home Assistant (Nmap Tracker)",
+      "title": "Presencia en la red (qui\u00e9n responde ahora mismo)",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -672,7 +672,7 @@
     {
       "id": 27,
       "type": "table",
-      "title": "Dispositivos rastreados por Nmap Tracker (HA)",
+      "title": "Qui\u00e9n responde en la red ahora mismo (Nmap Tracker)",
       "gridPos": {
         "h": 16,
         "w": 24,
