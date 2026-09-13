@@ -106,7 +106,11 @@ flowchart LR
   por email en cuanto se dispara.
 - **`backups/daily-report.py`**: correo diario (08:00) con el estado
   general del homelab — si hay problemas los lista con una pista para
-  resolverlos, si no, un resumen con las métricas más importantes.
+  resolverlos, si no, un resumen con las métricas más importantes. Los
+  problemas se derivan evaluando las reglas de
+  `grafana/provisioning/alerting/rules.yaml` directamente contra Prometheus
+  (única fuente de verdad de los umbrales, sin duplicarlos). Requiere
+  `python3-yaml`.
 
 ## Backups y restore (`backups/`)
 

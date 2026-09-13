@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Correo diario (08:00 via cron) con el estado general del homelab.
 
-Consulta Prometheus directamente (mismos umbrales que
-grafana/provisioning/alerting/rules.yaml) en vez de la API de Grafana, para
-no necesitar credenciales de administrador adicionales. Reutiliza el SMTP
-de Gmail ya configurado en .env (el mismo que usan Grafana y Vaultwarden).
+Consulta Prometheus directamente (en vez de la API de Grafana, para no
+necesitar credenciales de administrador adicionales). Los "problemas" se
+derivan parseando grafana/provisioning/alerting/rules.yaml y evaluando cada
+regla contra Prometheus con su propio umbral -- esa es la unica fuente de
+verdad de los umbrales, no se duplican aqui (ver check_problems). Reutiliza
+el SMTP de Gmail ya configurado en .env (el mismo que usan Grafana y
+Vaultwarden).
 
 Si todo esta bien: correo ligero con las metricas mas importantes (max 20).
 Si hay problemas: se listan primero, cada uno con una pista para resolverlo.
 """
 import json
+import re
 import smtplib
 import ssl
 import time
@@ -18,11 +22,30 @@ import urllib.parse
 from email.mime.text import MIMEText
 from pathlib import Path
 
+import yaml
+
 REPO_DIR = Path(__file__).resolve().parent.parent
 ENV_FILE = REPO_DIR / ".env"
+RULES_FILE = REPO_DIR / "grafana/provisioning/alerting/rules.yaml"
 PROM_URL = "http://localhost:9090"
 GRAFANA_URL = "https://grafana.kikeramirez.org"
 TO_ADDRESS = "enrique.rami.lopez@gmail.com"
+
+# Pistas en espanol por uid de regla -- lo unico que rules.yaml no trae y
+# que no tiene sentido meter alli (es texto de ayuda para humanos, no
+# logica de alertado).
+HINTS = {
+    "disk-space-low": "Libera espacio (docker system df / docker image prune) o amplia el disco.",
+    "target-down": "Comprueba que el contenedor/servicio este arriba: docker ps, docker logs.",
+    "container-restart-loop": "docker logs <contenedor> --since 15m para ver el motivo del crash.",
+    "backup-stale": "Revisa backups/backup.log y el cron (30 3 * * *); relanza con backups/backup.sh o el boton 'Backup ahora' del dashboard Backups si hace falta.",
+    "pihole-down": "docker logs pihole; comprueba backups/network-metrics.sh y su cron (*/5 * * * *).",
+    "restic-check-stale": "Revisa backups/restic-check.log -- puede ser un lock huerfano (restic unlock) o un fallo real de integridad.",
+    "service-http-down": "docker logs <servicio>; comprueba tambien nginx-proxy-manager y los certificados TLS.",
+    "container-not-running": "docker compose up -d <contenedor>; revisa docker logs <contenedor>.",
+    "backup-drive-low-space": "Revisa la retencion de snapshots (backups/backup.sh) o amplia el disco USB.",
+}
+DEFAULT_HINT = "Revisa Grafana > Alerting para mas detalle."
 
 
 def load_env():
@@ -73,116 +96,81 @@ def fmt_duration(seconds):
 
 
 # ---------------------------------------------------------------------------
-# Comprobaciones (mismos umbrales que rules.yaml) -> lista de problemas
+# Comprobaciones -> lista de problemas, derivadas de rules.yaml (unica
+# fuente de verdad de los umbrales; ver HINTS arriba para las pistas)
 # ---------------------------------------------------------------------------
+
+def load_rules():
+    doc = yaml.safe_load(RULES_FILE.read_text())
+    rules = []
+    for group in doc["groups"]:
+        rules.extend(group["rules"])
+    return rules
+
+
+def eval_threshold(value, cond_type, params):
+    if cond_type == "lt":
+        return value < params[0]
+    if cond_type == "gt":
+        return value > params[0]
+    raise ValueError(f"tipo de condicion no soportado en rules.yaml: {cond_type}")
+
+
+def render_summary(template, labels):
+    def repl(m):
+        return str(labels.get(m.group(1), ""))
+    return re.sub(r"\{\{\s*\$labels\.(\w+)\s*\}\}", repl, template)
+
 
 def check_problems():
     problems = []  # each: (severity, title, detail, hint)
 
-    # Espacio en disco raiz
-    disk_free_pct = scalar(
-        '100 * (node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} '
-        '/ node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"})'
-    )
-    if disk_free_pct is not None and disk_free_pct < 15:
-        problems.append((
-            "critical" if disk_free_pct < 5 else "warning",
-            "Disco raiz con poco espacio libre",
-            f"Solo queda un {disk_free_pct:.1f}% libre en /.",
-            "Libera espacio (docker system df / docker image prune) o amplia el disco.",
-        ))
+    for rule in load_rules():
+        uid = rule["uid"]
+        title = rule["title"]
+        by_ref = {d["refId"]: d["model"] for d in rule["data"]}
 
-    # Espacio en el disco USB de backups
-    backup_disk_pct = scalar(
-        "100 * (backup_drive_free_bytes / backup_drive_total_bytes)"
-    )
-    if backup_disk_pct is not None and backup_disk_pct < 10:
-        problems.append((
-            "warning",
-            "Disco USB de backups con poco espacio",
-            f"Solo queda un {backup_disk_pct:.1f}% libre en el disco de backups.",
-            "Revisa la retencion de snapshots (backups/backup.sh) o amplia el disco USB.",
-        ))
+        base_model = by_ref.get("A", {})
+        expr = base_model.get("expr")
+        threshold_model = by_ref.get(rule.get("condition", "C"), {})
+        conditions = threshold_model.get("conditions") or []
+        if not expr or threshold_model.get("type") != "threshold" or not conditions:
+            continue  # regla sin forma "query + umbral simple" evaluable aqui
 
-    # Backup nocturno
-    last_run_ts = scalar("backup_last_run_timestamp_seconds")
-    last_run_ok = scalar("backup_last_run_success")
-    if last_run_ts is None:
-        problems.append((
-            "critical",
-            "Sin datos del backup nocturno",
-            "No se encuentra backup_last_run_timestamp_seconds en Prometheus.",
-            "Comprueba que el cron de backups/backup.sh este activo (crontab -l) y revisa backups/backup.log.",
-        ))
-    else:
-        age = time.time() - last_run_ts
-        if last_run_ok == 0:
+        evaluator = conditions[0]["evaluator"]
+        severity = rule.get("labels", {}).get("severity", "warning")
+        summary_tpl = rule.get("annotations", {}).get("summary", title)
+        hint = HINTS.get(uid, DEFAULT_HINT)
+
+        try:
+            results = prom_query(expr)
+        except Exception as exc:
             problems.append((
-                "critical",
-                "El ultimo backup fallo",
-                f"El intento de hace {fmt_duration(age)} termino en error.",
-                "Revisa backups/backup.log y relanza con backups/backup.sh o el boton 'Backup ahora' del dashboard Backups.",
+                "warning",
+                f"No se pudo evaluar la regla '{title}'",
+                str(exc),
+                "Comprueba que Prometheus este arriba y que la query de la regla siga siendo valida.",
             ))
-        elif age > 93600:  # 26h, igual que rules.yaml
-            problems.append((
-                "critical",
-                "El backup nocturno lleva mas de 26h sin completarse",
-                f"Ultimo backup con exito hace {fmt_duration(age)}.",
-                "Revisa backups/backup.log y el cron (30 3 * * *); relanza manualmente si hace falta.",
-            ))
+            continue
 
-    # Targets de Prometheus caidos
-    for r in prom_query("up == 0"):
-        m = r["metric"]
-        problems.append((
-            "critical",
-            f"Target caido: {m.get('job')}",
-            f"{m.get('instance')} lleva sin responder mas de 5 minutos.",
-            f"Comprueba que el contenedor/servicio de '{m.get('job')}' este arriba: docker ps, docker logs.",
-        ))
+        if not results:
+            # Sin series -> replica noDataState: Alerting (mismo criterio que
+            # usa la propia regla en Grafana); el resto de noDataState
+            # (NoData/OK) no generan problema aqui, igual que antes.
+            if rule.get("noDataState") == "Alerting":
+                problems.append((
+                    severity,
+                    title,
+                    f"Sin datos para evaluar esta regla ({expr}).",
+                    hint,
+                ))
+            continue
 
-    # Contenedores del compose que deberian estar corriendo
-    for r in prom_query("container_docker_running == 0"):
-        name = r["metric"].get("name")
-        problems.append((
-            "critical",
-            f"Contenedor parado: {name}",
-            "Deberia estar corriendo segun docker-compose.yaml.",
-            f"docker compose up -d {name}; revisa docker logs {name}.",
-        ))
-
-    # Contenedores reiniciandose en bucle
-    for r in prom_query(
-        "sum by (name) (changes(container_start_time_seconds{name=~\".+\"}[15m])) > 2"
-    ):
-        name = r["metric"].get("name")
-        restarts = r["value"][1]
-        problems.append((
-            "warning",
-            f"Reinicios repetidos: {name}",
-            f"Se ha reiniciado {restarts} veces en los ultimos 15 minutos.",
-            f"docker logs {name} --since 15m para ver el motivo del crash.",
-        ))
-
-    # Pi-hole
-    pihole_up = scalar("pihole_up")
-    if pihole_up is not None and pihole_up < 1:
-        problems.append((
-            "critical",
-            "Pi-hole no responde",
-            "network-metrics.sh no ha podido contactar con la API de Pi-hole.",
-            "docker logs pihole; comprueba backups/network-metrics.sh y su cron (*/5 * * * *).",
-        ))
-
-    # Servicios web (blackbox http)
-    for r in prom_query('probe_success{job="blackbox-http"} == 0'):
-        service = r["metric"].get("service", r["metric"].get("instance"))
-        problems.append((
-            "critical",
-            f"Servicio web caido: {service}",
-            "No responde por HTTP desde hace mas de 5 minutos.",
-            f"docker logs {service}; comprueba tambien nginx-proxy-manager y los certificados TLS.",
-        ))
+        for r in results:
+            value = float(r["value"][1])
+            if eval_threshold(value, evaluator["type"], evaluator["params"]):
+                detail = render_summary(summary_tpl, r.get("metric", {}))
+                problems.append((severity, title, detail, hint))
 
     return problems
 

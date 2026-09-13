@@ -12,6 +12,8 @@ ajusta esa ruta antes de continuar.
 ## 1. Prerrequisitos
 
 - Máquina Linux con Docker Engine + plugin `docker compose` instalados.
+- `python3-yaml` (`sudo apt install python3-yaml`) — lo usa `daily-report.py`
+  para leer `grafana/provisioning/alerting/rules.yaml` directamente.
 - Disco USB externo dedicado a backups.
 - Dominio propio (para Nginx Proxy Manager + Let's Encrypt + Grafana).
 - Dongle Zigbee USB (para Home Assistant), conectado antes de arrancar.
