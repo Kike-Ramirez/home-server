@@ -48,7 +48,7 @@ Rellena cada variable:
 | `VAULTWARDEN_ADMIN_TOKEN` | `openssl rand -base64 48` |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | Cuenta Gmail + [contraseña de aplicación](https://myaccount.google.com/apppasswords). |
 | `GF_SECURITY_ADMIN_USER` / `GF_SECURITY_ADMIN_PASSWORD` | `admin` + `openssl rand -base64 24` — evita que Grafana quede en `admin/admin` si se recrea el volumen `grafana_data`. |
-| `TS_AUTHKEY` | Tailscale admin console → Settings → Keys → generar una auth key reusable. |
+| `TS_AUTHKEY` | Tailscale admin console → Settings → Keys → generar una auth key reusable. **Una vez el nodo esté autenticado y `docker compose ps tailscale` lo muestre `healthy`** (el estado persiste en `tailscale/state/`, no vuelve a necesitar la key salvo que se borre ese estado), revócala desde la consola y vacía `TS_AUTHKEY=` en `.env` — dejarla viva indefinidamente en texto plano es un secreto de "añadir dispositivo a mi tailnet" sin necesidad real. |
 | `BACKUP_TRIGGER_TOKEN` | `openssl rand -hex 32` — lo usará el dashboard "Backups" para llamar al webhook. |
 | `TELEGRAM_API_TOKEN` | El que te dio `@BotFather` al crear el bot. |
 | `TELEGRAM_CLIENT_ID` | Chat_id del grupo/chat de Telegram donde quieres alertas + Sebastián — ver paso 9, se rellena al final. |
