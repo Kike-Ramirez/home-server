@@ -1,6 +1,6 @@
 #!/bin/bash
-# Shared helpers for backup.sh (nightly) and backup-monthly.sh (full system,
-# kept forever). Sourced, not executed directly.
+# Shared helpers for the backups/*.sh scripts (backup.sh, backup-monthly.sh,
+# network-metrics.sh, ...). Sourced, not executed directly.
 set -uo pipefail
 
 BASE_DIR="/home/home/home"
@@ -13,6 +13,15 @@ SIZE_CACHE_FILE="$METRICS_DIR/snapshot-sizes.json"
 LOCK_FILE="$BASE_DIR/backups/backup.lock"
 
 mkdir -p "$METRICS_DIR"
+
+# read_env_var <KEY> -- lee un valor de .env (formato plano KEY=VALUE, sin
+# comillas). Con varias apariciones de la misma clave, usa la ultima.
+read_env_var() {
+  local key="$1"
+  local line
+  line=$(grep "^${key}=" "$BASE_DIR/.env" | tail -1)
+  echo "${line#*=}"
+}
 
 restic_run() {
   docker run --rm \

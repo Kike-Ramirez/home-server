@@ -1,12 +1,11 @@
 #!/bin/bash
 set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+source ./backup-common.sh
 
-METRICS_DIR="/home/home/home/backups/metrics"
 METRICS_FILE="$METRICS_DIR/network.prom"
 PIHOLE_HOST="http://localhost:8080"
-PIHOLE_PASSWORD=$(grep '^PIHOLE_PASSWORD=' /home/home/home/.env | cut -d= -f2-)
-
-mkdir -p "$METRICS_DIR"
+PIHOLE_PASSWORD=$(read_env_var PIHOLE_PASSWORD)
 
 SID=$(curl -sk -X POST "$PIHOLE_HOST/api/auth" -H "Content-Type: application/json" \
   -d "{\"password\":\"$PIHOLE_PASSWORD\"}" | python3 -c "import json,sys; print(json.load(sys.stdin).get('session',{}).get('sid',''))" 2>/dev/null)
