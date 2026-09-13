@@ -729,11 +729,11 @@
               "type": "value",
               "options": {
                 "1": {
-                  "text": "En casa",
+                  "text": "Responde",
                   "color": "green"
                 },
                 "0": {
-                  "text": "Fuera",
+                  "text": "No responde",
                   "color": "text"
                 }
               }
