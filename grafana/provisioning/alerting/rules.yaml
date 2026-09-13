@@ -201,6 +201,45 @@ groups:
         annotations:
           summary: "network-metrics.sh no ha podido contactar con la API de Pi-hole en los ultimos 10 minutos."
 
+      - uid: restic-check-stale
+        title: "El check de integridad restic (local u offsite) lleva mas de 40 dias sin completarse con exito"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              refId: A
+              instant: true
+              range: false
+              expr: (time() - restic_check_last_run_timestamp_seconds) * restic_check_last_success + (1 - restic_check_last_success) * 999999
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [3456000]
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "El check de integridad restic del repo {{ $labels.repo }} lleva mas de 40 dias sin completarse con exito, o el ultimo intento fallo. Revisa backups/restic-check.log."
+
       - uid: service-http-down
         title: "Un servicio web (Vaultwarden / NPM / Home Assistant / webhook-server) no responde"
         condition: C
