@@ -268,6 +268,23 @@ sudo msmtp -a gmail <tu-email> <<< "Test unattended-upgrades"
 echo "exit=$?"   # debe dar 0, sin ningún mensaje de msmtp
 ```
 
+### 11.3 Rotación de los logs de `backups/` y de Sebastián
+
+Por qué: `backup.log`, `webhook-server.log`, `daily-report.log`, etc. crecen
+sin límite si nada los rota — `backups/logrotate.conf` (versionado) cubre
+todos los `backups/*.log` más `telegram-agent/agent.log`.
+
+```bash
+sudo cp backups/logrotate.conf /etc/logrotate.d/homelab
+sudo logrotate -d /etc/logrotate.d/homelab   # dry-run, valida la config
+```
+
+Semanal, 8 semanas de histórico, comprimido. `su home home` en la config es
+necesario porque `backups/` es `775` (no solo escribible por root) —
+logrotate se niega a rotar ahí sin decirle explícitamente qué usuario/grupo
+usar. Lo dispara el cron diario que ya trae Ubuntu (`/etc/cron.daily/logrotate`),
+no hace falta un cron propio.
+
 ## 12. Backup offsite en Google Drive (3-2-1)
 
 Por qué: el USB de backups local es un único punto de fallo físico (robo,
@@ -355,3 +372,4 @@ Pega exactamente esto (ajusta rutas solo si no clonaste en `/home/home/home`):
 - `sudo msmtp -a gmail <tu-email> <<< "test"` sin errores — confirma que
   `unattended-upgrades` podrá avisar por correo si algo falla.
 - `RESTIC_REPOSITORY=rclone:gdrive:home-backups-offsite RESTIC_PASSWORD_FILE=backups/restic-password.txt restic snapshots` muestra al menos un `monthly-full`.
+- `sudo logrotate -d /etc/logrotate.d/homelab` sin errores (`insecure permissions`, etc.).
