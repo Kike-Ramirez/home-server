@@ -1,5 +1,7 @@
 # 🏠 home
 
+🇪🇸 Español · [🇬🇧 English](README.en.md)
+
 > Infraestructura de un homelab casero (Dell Optiplex), gestionada 100% como código: `docker-compose.yaml` + configuración versionada, con monitorización, alertado, backups y restore automatizados.
 
 ![Docker Compose](https://img.shields.io/badge/docker--compose-10%20servicios-2496ED?logo=docker&logoColor=white)
@@ -9,6 +11,13 @@
 ![Tailscale](https://img.shields.io/badge/acceso%20remoto-Tailscale-242938?logo=tailscale&logoColor=white)
 ![Bash](https://img.shields.io/badge/scripts-Bash%20%2F%20Python-4EAA25?logo=gnubash&logoColor=white)
 ![Status](https://img.shields.io/badge/estado-en%20producción-30D158)
+
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.9.0-41BDF5?logo=homeassistant&logoColor=white)
+![Pi-hole](https://img.shields.io/badge/Pi--hole-2026.07.2-96060C?logo=pihole&logoColor=white)
+![Vaultwarden](https://img.shields.io/badge/Vaultwarden-1.37.2-175DDC?logo=vaultwarden&logoColor=white)
+![Nginx Proxy Manager](https://img.shields.io/badge/Nginx%20Proxy%20Manager-2.15.1-F15833?logo=nginxproxymanager&logoColor=white)
+![Backups](https://img.shields.io/badge/backups-3--2--1%20(local%20%2B%20offsite)-33b1e0)
+![Retention](https://img.shields.io/badge/retención%20métricas-730%20días-b877d9)
 
 ---
 

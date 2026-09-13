@@ -1,5 +1,7 @@
 # Restaurar el homelab desde backup (máquina nueva o disco roto)
 
+🇪🇸 Español · [🇬🇧 English](RESTAURAR-DESDE-BACKUP.en.md)
+
 Para esto: la máquina que corría el stack ha muerto (disco, placa, lo que
 sea) y quieres levantarlo todo de nuevo en otra, partiendo del último backup
 en el USB externo. Si en cambio el sistema sigue vivo y solo quieres
@@ -115,7 +117,7 @@ con el `docker-compose.yaml`/`.env` que acaban de volver.
 ## 6. Lo que el backup NO trae — hay que rehacerlo a mano
 
 - **Crontab**: no se respalda. Instálalo tal cual está en
-  [`SETUP-DESDE-CERO.md`, paso 10](SETUP-DESDE-CERO.md#10-crontab).
+  [`SETUP-DESDE-CERO.md`, paso 13](SETUP-DESDE-CERO.md#13-crontab).
 - **`telegram-agent/.venv`**: no se respalda (es reproducible). Recréalo:
   ```bash
   cd telegram-agent
@@ -145,6 +147,6 @@ con el `docker-compose.yaml`/`.env` que acaban de volver.
 
 ## 7. Verificación
 
-Igual que en `SETUP-DESDE-CERO.md`, paso 11:
+Igual que en `SETUP-DESDE-CERO.md`, paso 14:
 `docker compose ps`, Grafana accesible, `systemctl status sebastian-bot`,
 Sebastián responde en el grupo de Telegram, backup de prueba a mano.

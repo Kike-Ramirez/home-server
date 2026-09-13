@@ -1,5 +1,7 @@
 # Levantar el homelab desde cero
 
+🇪🇸 Español · [🇬🇧 English](SETUP-DESDE-CERO.en.md)
+
 Guía paso a paso para desplegar todo el stack en una máquina nueva, sin
 backup previo. Si ya existía un backup de un sistema anterior (disco roto,
 migración de hardware), usa en su lugar
