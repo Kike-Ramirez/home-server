@@ -332,6 +332,7 @@ Pega exactamente esto (ajusta rutas solo si no clonaste en `/home/home/home`):
 30 3 * * * /home/home/home/backups/backup.sh
 0 0 1 * * /home/home/home/backups/backup-monthly.sh
 30 1 1 * * /home/home/home/backups/backup-offsite.sh
+0 2 15 * * /home/home/home/backups/restic-check.sh
 */5 * * * * /home/home/home/backups/network-metrics.sh
 * * * * * /home/home/home/backups/container-health-metrics.sh
 0 8 * * * /usr/bin/python3 /home/home/home/backups/daily-report.py >> /home/home/home/backups/daily-report.log 2>&1
