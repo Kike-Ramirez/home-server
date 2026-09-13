@@ -322,7 +322,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 37
       }
     },
     {
@@ -331,7 +331,7 @@
       "title": "Gateway",
       "gridPos": {
         "x": 0,
-        "y": 21,
+        "y": 38,
         "w": 6,
         "h": 4
       },
@@ -386,7 +386,7 @@
       "title": "Latencia al Gateway",
       "gridPos": {
         "x": 6,
-        "y": 21,
+        "y": 38,
         "w": 6,
         "h": 4
       },
@@ -425,7 +425,7 @@
       "title": "Ping",
       "gridPos": {
         "x": 12,
-        "y": 21,
+        "y": 38,
         "w": 6,
         "h": 4
       },
@@ -451,7 +451,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 42
       },
       "targets": [
         {
@@ -475,7 +475,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 42
       },
       "targets": [
         {
@@ -499,7 +499,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 50
       },
       "targets": [
         {
@@ -528,7 +528,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 41
+        "y": 58
       },
       "targets": [
         {
@@ -551,7 +551,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 58
       },
       "targets": [
         {
@@ -606,7 +606,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 62
       },
       "targets": [
         {
@@ -635,7 +635,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 70
       },
       "targets": [
         {
@@ -654,6 +654,108 @@
           "unit": "Bps"
         },
         "overrides": []
+      }
+    },
+    {
+      "id": 26,
+      "type": "row",
+      "title": "Dispositivos Home Assistant (Nmap Tracker)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 27,
+      "type": "table",
+      "title": "Dispositivos rastreados por Nmap Tracker (HA)",
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "targets": [
+        {
+          "expr": "homeassistant_device_tracker_state{domain=\"device_tracker\"}",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "domain": true,
+              "instance": true,
+              "job": true,
+              "entity": true
+            },
+            "indexByName": {
+              "friendly_name": 0,
+              "Value": 1
+            },
+            "renameByName": {
+              "friendly_name": "Nombre",
+              "Value": "Estado"
+            }
+          }
+        }
+      ],
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "Nombre",
+            "desc": false
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "En casa",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "Fuera",
+                  "color": "text"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Estado"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
       }
     }
   ],
