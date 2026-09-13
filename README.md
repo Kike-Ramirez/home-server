@@ -125,7 +125,8 @@ flowchart LR
 | `webhook-server.py` | Servidor HTTP mínimo (stdlib only, en el host, gestionado como servicio systemd `webhook-server.service`) que expone `backup-now`, `restore` (confirmación) y `restore-confirm` (ejecución) como botones del dashboard "Backups". Protegido por token compartido, solo accesible desde LAN/Tailscale. |
 | `container-health-metrics.sh` | Estado de `HEALTHCHECK` de cada contenedor → textfile collector (cron cada minuto). |
 | `network-metrics.sh` | Métricas de Pi-hole (resumen + dispositivos) → textfile collector. |
-| `backup-common.sh` | Helpers compartidos (lock, logging, métricas) usados por los scripts de backup/restore. |
+| `backup-common.sh` | Helpers compartidos (lock, logging, métricas, lectura de `.env`) usados por los scripts de backup/restore. |
+| `docker-prune.sh` | `docker system prune -f` semanal (domingos 04:00): contenedores parados, redes huérfanas, imágenes dangling y build cache. No toca imágenes con tag en uso ni volúmenes. |
 
 El repositorio de `restic` (cifrado, deduplicado) se guarda en un disco USB
 externo montado en `/media/home/home-backups`, con la contraseña en
