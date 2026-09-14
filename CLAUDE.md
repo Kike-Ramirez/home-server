@@ -26,7 +26,7 @@ Infraestructura de un homelab casero (Dell Optiplex, dominio `kikeramirez.org`) 
 
 ## Backups y restore (`backups/`)
 
-- Motor: **restic** (cifrado, deduplicado), repo en USB externo montado en `/media/home/home-backups`.
+- Motor: **restic** (cifrado, deduplicado), repo en USB externo montado en `/media/home/home-backups`. El disco se monta vía `/etc/fstab` (entrada por `UUID`, no por `/dev/sdX` — el nombre de dispositivo puede cambiar de puerto USB, el UUID no), con `nofail`. **No depende del automount de escritorio** (udisks/gvfs): ese solo monta con sesión de usuario activa, así que un cron sin sesión gráfica (p. ej. `backup.sh` a las 03:30) puede encontrarse el disco sin montar tras un reinicio — pasó justo así el 2026-09-14 al cambiar el disco de puerto USB (forzó reinicio + bit NTFS "dirty" por desconexión no limpia). Todos los scripts comprueban `mountpoint -q /media/home/home-backups` y abortan si no está montado.
 - `backup.sh` (cron 03:30): nightly, tag `nightly`, rotación 7d/4w/6m.
 - `backup-monthly.sh` (cron día 1 00:00): `monthly-full`, **conservado para siempre** (`--keep-tag monthly-full`), incluye además `docker-compose.yaml`, `.env`, config Prometheus/Blackbox, estado Tailscale y BD de Grafana.
 - `backup-offsite.sh` (cron día 1 01:30, tras el mensual): copia los snapshots `monthly-full` a un segundo repo restic en Google Drive (`rclone:gdrive:home-backups-offsite`, remote `gdrive` configurado con credenciales OAuth propias en `rclone config`, no las compartidas de rclone — la cuota compartida por defecto da `rateLimitExceeded` constante). Cubre pérdida total del USB local (3-2-1). Usa `restic` nativo (`~/.local/bin/restic`), no el contenedor `restic/restic` — esa imagen no trae el backend rclone.

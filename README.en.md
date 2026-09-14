@@ -140,6 +140,23 @@ The `restic` repository (encrypted, deduplicated) is stored on an external
 USB drive mounted at `/media/home/home-backups`, with the password in
 `backups/restic-password.txt` (not version-controlled).
 
+The drive is mounted via `/etc/fstab` (entry by `UUID`, not by device path
+like `/dev/sdb1` — the device name can change depending on the USB port
+used, the UUID doesn't), with `nofail` so a missing drive never blocks boot.
+**Don't rely on desktop automount (udisks/gvfs)**: it only mounts the drive
+when there's an active user session, so a cron job at 03:30 (no graphical
+session) can find the drive unmounted — that's exactly what happened after
+moving the drive to a different USB port, which forced a reboot and the
+automount never kicked in. Every script checks
+`mountpoint -q /media/home/home-backups` and aborts if it's not mounted, so
+a mount failure shows up in the log/alert instead of corrupting anything —
+but it's better to avoid the failure at the root with the `fstab` entry.
+Example line (swap in the UUID from `lsblk -o NAME,UUID,LABEL`):
+
+```
+UUID=<drive-uuid> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10 0 0
+```
+
 > ⚠️ **Restoring a backup overwrites production data.** The dashboard
 > requires explicit confirmation and always leaves a `pre-restore` snapshot
 > before applying anything.

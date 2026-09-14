@@ -78,8 +78,27 @@ tú con las claves que falten.
 
 ## 5. Montar el disco de backups e inicializar restic
 
+Móntalo vía `/etc/fstab`, no con el automount de escritorio (udisks/gvfs):
+ese automount solo monta el disco cuando hay una sesión de usuario activa,
+así que un cron nocturno sin sesión gráfica (como `backup.sh` a las 03:30) se
+lo puede encontrar sin montar — sobre todo tras un reinicio, que es cuando
+más falla. Todos los scripts de `backups/` comprueban
+`mountpoint -q /media/home/home-backups` y abortan si no está montado, así
+que el síntoma es un backup fallido, no datos corruptos, pero mejor evitarlo
+desde la raíz.
+
 ```bash
-# Monta tu USB en /media/home/home-backups (fstab o a mano) y luego:
+# UUID del disco (no uses /dev/sdb1 o similar: el nombre puede cambiar
+# según el puerto USB usado, el UUID no)
+lsblk -o NAME,UUID,LABEL
+
+# Añade a /etc/fstab (sustituye <uuid-del-disco>):
+# UUID=<uuid-del-disco> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10 0 0
+#   - nofail: si el disco no está conectado al arrancar, el sistema arranca igual
+#   - uid/gid: NTFS no tiene permisos Unix nativos, se los asignamos aquí
+#   - x-systemd.device-timeout=10: no bloquear el arranque más de 10s si el disco no aparece
+
+sudo mount -a   # monta todo lo de fstab, incluida la entrada nueva
 mkdir -p /media/home/home-backups/home-backups
 
 docker run --rm \

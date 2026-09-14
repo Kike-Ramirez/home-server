@@ -79,8 +79,26 @@ create it yourself with the keys you're missing.
 
 ## 5. Mount the backups drive and initialize restic
 
+Mount it via `/etc/fstab`, not desktop automount (udisks/gvfs): that
+automount only mounts the drive when there's an active user session, so a
+cron job with no graphical session (like `backup.sh` at 03:30) can find it
+unmounted — most likely right after a reboot. Every script in `backups/`
+checks `mountpoint -q /media/home/home-backups` and aborts if it's not
+mounted, so the symptom is a failed backup, not corrupted data, but it's
+better to avoid it at the root.
+
 ```bash
-# Mount your USB drive at /media/home/home-backups (fstab or by hand), then:
+# Drive UUID (don't use /dev/sdb1 or similar: the device name can change
+# depending on the USB port used, the UUID doesn't)
+lsblk -o NAME,UUID,LABEL
+
+# Add to /etc/fstab (swap in <drive-uuid>):
+# UUID=<drive-uuid> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10 0 0
+#   - nofail: boot proceeds even if the drive isn't connected
+#   - uid/gid: NTFS has no native Unix permissions, so we assign them here
+#   - x-systemd.device-timeout=10: don't block boot for more than 10s if the drive is missing
+
+sudo mount -a   # mount everything in fstab, including the new entry
 mkdir -p /media/home/home-backups/home-backups
 
 docker run --rm \

@@ -141,6 +141,24 @@ El repositorio de `restic` (cifrado, deduplicado) se guarda en un disco USB
 externo montado en `/media/home/home-backups`, con la contraseña en
 `backups/restic-password.txt` (no versionada).
 
+El disco se monta vía `/etc/fstab` (entrada por `UUID`, no por ruta de
+dispositivo como `/dev/sdb1` — el nombre puede cambiar según el puerto USB
+usado, el UUID no), con `nofail` para no bloquear el arranque si el disco no
+está conectado. **No usar el automount de escritorio (udisks/gvfs)**: solo
+monta el disco cuando hay una sesión de usuario activa, así que un cron a las
+03:30 (sin sesión gráfica) puede encontrarse el disco sin montar — es lo que
+pasó tras cambiar el disco de puerto USB, que forzó un reinicio y el
+automount no llegó a montarlo. Todos los scripts comprueban
+`mountpoint -q /media/home/home-backups` antes de tocar el repo y abortan si
+no está montado, así que un fallo de montaje se nota en el log/alerta en vez
+de corromper nada — pero conviene evitar el fallo desde la raíz con la
+entrada en `fstab`. Ejemplo de línea (sustituye el UUID por el de
+`lsblk -o NAME,UUID,LABEL`):
+
+```
+UUID=<uuid-del-disco> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10 0 0
+```
+
 > ⚠️ **Restaurar un backup sobrescribe datos en producción.** El dashboard
 > pide confirmación explícita y siempre deja un snapshot `pre-restore` antes
 > de aplicar nada.
