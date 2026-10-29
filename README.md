@@ -156,7 +156,22 @@ entrada en `fstab`. Ejemplo de línea (sustituye el UUID por el de
 `lsblk -o NAME,UUID,LABEL`):
 
 ```
-UUID=<uuid-del-disco> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10 0 0
+UUID=<uuid-del-disco> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10,x-systemd.requires=ntfsfix-home-backups.service 0 0
+```
+
+El equipo no tiene SAI, así que un corte de luz provoca un apagado sucio que
+deja el NTFS marcado "dirty" (y a veces un mismatch real entre `$MFT` y
+`$MFTMirr`) — y por diseño NTFS se niega a montarse solo en ese estado, para
+que un humano decida. `backups/ntfsfix-home-backups.service` (instalado en
+`/etc/systemd/system/`, enganchado vía el `x-systemd.requires=` de arriba)
+ejecuta `ntfsfix -d` sobre el disco **antes** de cada intento de montaje, así
+que se autorepara en cada arranque sin intervención manual. Instalación:
+
+```bash
+sudo cp backups/ntfsfix-home-backups.service /etc/systemd/system/
+sudo systemctl daemon-reload
+# añade x-systemd.requires=ntfsfix-home-backups.service a la línea del fstab (ver arriba)
+sudo systemctl daemon-reload
 ```
 
 > ⚠️ **Restaurar un backup sobrescribe datos en producción.** El dashboard

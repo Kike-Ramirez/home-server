@@ -92,12 +92,21 @@ desde la raíz.
 # según el puerto USB usado, el UUID no)
 lsblk -o NAME,UUID,LABEL
 
+# Si no hay SAI/UPS, instala primero el auto-reparador de NTFS: un corte de
+# luz deja el volumen "dirty" (a veces con un mismatch real $MFT/$MFTMirr) y
+# NTFS se niega a montarse solo. Este servicio corre `ntfsfix -d` antes de
+# cada intento de montaje.
+sudo cp backups/ntfsfix-home-backups.service /etc/systemd/system/
+sudo systemctl daemon-reload
+
 # Añade a /etc/fstab (sustituye <uuid-del-disco>):
-# UUID=<uuid-del-disco> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10 0 0
+# UUID=<uuid-del-disco> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10,x-systemd.requires=ntfsfix-home-backups.service 0 0
 #   - nofail: si el disco no está conectado al arrancar, el sistema arranca igual
 #   - uid/gid: NTFS no tiene permisos Unix nativos, se los asignamos aquí
 #   - x-systemd.device-timeout=10: no bloquear el arranque más de 10s si el disco no aparece
+#   - x-systemd.requires=ntfsfix-home-backups.service: repara el bit dirty antes de montar
 
+sudo systemctl daemon-reload
 sudo mount -a   # monta todo lo de fstab, incluida la entrada nueva
 mkdir -p /media/home/home-backups/home-backups
 

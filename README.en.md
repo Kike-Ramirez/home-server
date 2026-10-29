@@ -154,7 +154,23 @@ but it's better to avoid the failure at the root with the `fstab` entry.
 Example line (swap in the UUID from `lsblk -o NAME,UUID,LABEL`):
 
 ```
-UUID=<drive-uuid> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10 0 0
+UUID=<drive-uuid> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10,x-systemd.requires=ntfsfix-home-backups.service 0 0
+```
+
+The machine has no UPS, so a power outage causes an unclean shutdown that
+leaves the NTFS volume marked "dirty" (sometimes with a real `$MFT`/
+`$MFTMirr` mismatch) — and by design NTFS refuses to auto-mount in that
+state, so a human can decide. `backups/ntfsfix-home-backups.service`
+(installed under `/etc/systemd/system/`, wired in via the
+`x-systemd.requires=` option above) runs `ntfsfix -d` on the drive
+**before** every mount attempt, so it self-heals on every boot with no
+manual steps. Install it with:
+
+```bash
+sudo cp backups/ntfsfix-home-backups.service /etc/systemd/system/
+sudo systemctl daemon-reload
+# add x-systemd.requires=ntfsfix-home-backups.service to the fstab line above
+sudo systemctl daemon-reload
 ```
 
 > ⚠️ **Restoring a backup overwrites production data.** The dashboard

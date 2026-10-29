@@ -1,0 +1,10 @@
+[Unit]
+Description=Repara el bit dirty del NTFS de backups antes de montarlo (necesario tras apagados sucios por corte de luz)
+DefaultDependencies=no
+BindsTo=dev-disk-by\x2duuid-A4C8148DC8145FBA.device
+After=dev-disk-by\x2duuid-A4C8148DC8145FBA.device
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ntfsfix -d /dev/disk/by-uuid/A4C8148DC8145FBA
+RemainAfterExit=yes

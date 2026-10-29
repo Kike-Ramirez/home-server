@@ -92,12 +92,21 @@ better to avoid it at the root.
 # depending on the USB port used, the UUID doesn't)
 lsblk -o NAME,UUID,LABEL
 
+# If there's no UPS, install the NTFS auto-repair service first: a power
+# outage leaves the volume "dirty" (sometimes with a real $MFT/$MFTMirr
+# mismatch) and NTFS refuses to auto-mount. This service runs `ntfsfix -d`
+# before every mount attempt.
+sudo cp backups/ntfsfix-home-backups.service /etc/systemd/system/
+sudo systemctl daemon-reload
+
 # Add to /etc/fstab (swap in <drive-uuid>):
-# UUID=<drive-uuid> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10 0 0
+# UUID=<drive-uuid> /media/home/home-backups ntfs3 defaults,nofail,uid=1000,gid=1000,umask=002,x-systemd.device-timeout=10,x-systemd.requires=ntfsfix-home-backups.service 0 0
 #   - nofail: boot proceeds even if the drive isn't connected
 #   - uid/gid: NTFS has no native Unix permissions, so we assign them here
 #   - x-systemd.device-timeout=10: don't block boot for more than 10s if the drive is missing
+#   - x-systemd.requires=ntfsfix-home-backups.service: repair the dirty bit before mounting
 
+sudo systemctl daemon-reload
 sudo mount -a   # mount everything in fstab, including the new entry
 mkdir -p /media/home/home-backups/home-backups
 
