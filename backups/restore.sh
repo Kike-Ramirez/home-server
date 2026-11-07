@@ -74,6 +74,10 @@ if [ $? -ne 0 ]; then
   echo "$(date '+%F %T') ERROR (restore): fallo el snapshot de seguridad pre-restore, abortando sin tocar nada" >> "$LOG_FILE"
   exit 1
 fi
+# Ver comentario equivalente en backup.sh: el contenedor de arriba corre
+# como root y deja el repo root:root -- lo arreglamos aqui para que
+# backup-offsite.sh (restic nativo, corre como home) pueda seguir leyendolo.
+docker run --rm --entrypoint chown -v "$REPO_DIR:/repo" restic/restic:latest -R 1000:1000 /repo >> "$LOG_FILE" 2>&1
 echo "$(date '+%F %T') INFO (restore): snapshot de seguridad pre-restore creado" >> "$LOG_FILE"
 
 # 2) Parar el stack.

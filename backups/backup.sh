@@ -40,6 +40,11 @@ restic_run forget \
 FORGET_STATUS=$?
 
 if [ "$BACKUP_STATUS" -eq 0 ] && [ "$FORGET_STATUS" -eq 0 ]; then
+  # El contenedor de arriba corre como root (lo necesita para leer ficheros
+  # restringidos de las apps, p.ej. certificados de letsencrypt 600) y deja
+  # el repo root:root -- lo arreglamos aqui para que backup-offsite.sh
+  # (restic nativo, corre como home) pueda seguir leyendolo.
+  docker run --rm --entrypoint chown -v "$REPO_DIR:/repo" restic/restic:latest -R 1000:1000 /repo >> "$LOG_FILE" 2>&1
   echo "$(date '+%F %T') OK: backup nocturno completado" >> "$LOG_FILE"
   write_metrics 1 "$START_TS"
 else

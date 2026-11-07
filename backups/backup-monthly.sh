@@ -45,6 +45,11 @@ docker run --rm \
 BACKUP_STATUS=$?
 
 if [ "$BACKUP_STATUS" -eq 0 ]; then
+  # Ver comentario equivalente en backup.sh: el contenedor corre como root
+  # (necesita leer ficheros restringidos de las apps) y deja el repo
+  # root:root -- lo arreglamos aqui para que backup-offsite.sh (restic
+  # nativo, corre como home) pueda seguir leyendolo.
+  docker run --rm --entrypoint chown -v "$REPO_DIR:/repo" restic/restic:latest -R 1000:1000 /repo >> "$LOG_FILE" 2>&1
   echo "$(date '+%F %T') OK: backup mensual (permanente) completado" >> "$LOG_FILE"
   write_metrics 1 "$START_TS"
 else
