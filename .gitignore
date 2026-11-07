@@ -10,8 +10,10 @@ backups/restic-password.txt
 # leer /api/prometheus
 prometheus/ha-token.txt
 
-# Runtime logs & locks
+# Runtime logs & locks (incluye los rotados/comprimidos por logrotate.conf,
+# p.ej. backup.log.1, docker-prune.log.2.gz)
 backups/*.log
+backups/*.log.*
 backups/backup.lock
 backups/webhook-server.log
 backups/metrics/
@@ -19,6 +21,7 @@ backups/metrics/
 # Demonio de Telegram: venv, logs y estado runtime (memoria/sesión de Sebastián)
 telegram-agent/.venv/
 telegram-agent/*.log
+telegram-agent/*.log.*
 telegram-agent/memory.md
 telegram-agent/session_id.txt
 
